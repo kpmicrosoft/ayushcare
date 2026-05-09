@@ -1,7 +1,7 @@
 # ayushcare
 
 Electronic Health Records web + mobile app built with Expo web and Azure.
-
+-------------
 ## Project goal
 Build a single codebase experience for patients to:
 - login with mobile number and OTP
