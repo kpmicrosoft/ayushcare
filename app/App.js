@@ -397,43 +397,60 @@ export default function App() {
 
           {!editMode ? (
             <>
-              {/* View mode */}
+              {/* View mode — skip empty fields */}
               {[
-                ['First Name / మొదటి పేరు',   userInfo.firstName],
-                ['Middle Name / మధ్య పేరు',   userInfo.middleName],
-                ['Last Name / చివరి పేరు',    userInfo.lastName],
-                ['Email / ఇమెయిల్',           userInfo.email],
+                ['First Name / మొదటి పేరు',      userInfo.firstName],
+                ['Middle Name / మధ్య పేరు',      userInfo.middleName],
+                ['Last Name / చివరి పేరు',       userInfo.lastName],
+                ['Email / ఇమెయిల్',              userInfo.email],
                 ['Date of Birth / పుట్టిన తేదీ', userInfo.dob],
-              ].map(([label, val]) => (
+              ].filter(([, val]) => val && val.trim()).map(([label, val]) => (
                 <View key={label} style={styles.infoRow}>
                   <Text style={styles.infoLabel}>{label}</Text>
-                  <Text style={styles.infoValue}>{val || '—'}</Text>
+                  <Text style={styles.infoValue}>{val}</Text>
                 </View>
               ))}
 
-              <Text style={styles.sectionSubtitle}>Address / చిరునామా</Text>
-              {[
-                ['Line 1 / వరుస 1',                   (userInfo.address||{}).line1],
-                ['Line 2 / వరుస 2',                   (userInfo.address||{}).line2],
-                ['Village / Town / గ్రామం / పట్టణం',  (userInfo.address||{}).city],
-                ['District / జిల్లా',                 (userInfo.address||{}).district],
-                ['State / రాష్ట్రం',                  (userInfo.address||{}).state],
-                ['PIN / ZIP / పిన్ కోడ్',             (userInfo.address||{}).pincode],
-                ['Country / దేశం',                   (userInfo.address||{}).country],
-              ].map(([label, val]) => (
-                <View key={label} style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>{label}</Text>
-                  <Text style={styles.infoValue}>{val || '—'}</Text>
-                </View>
-              ))}
+              {(() => {
+                const addr = userInfo.address || {};
+                const rows = [
+                  ['Line 1 / వరుస 1',                  addr.line1],
+                  ['Line 2 / వరుస 2',                  addr.line2],
+                  ['Village / Town / గ్రామం / పట్టణం', addr.city],
+                  ['District / జిల్లా',                addr.district],
+                  ['State / రాష్ట్రం',                 addr.state],
+                  ['PIN / ZIP / పిన్ కోడ్',            addr.pincode],
+                  ['Country / దేశం',                  addr.country],
+                ].filter(([, val]) => val && String(val).trim());
+                if (rows.length === 0) return null;
+                return (
+                  <>
+                    <Text style={styles.sectionSubtitle}>Address / చిరునామా</Text>
+                    {rows.map(([label, val]) => (
+                      <View key={label} style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>{label}</Text>
+                        <Text style={styles.infoValue}>{val}</Text>
+                      </View>
+                    ))}
+                  </>
+                );
+              })()}
 
-              <Text style={styles.sectionSubtitle}>Social Handles / సామాజిక హ్యాండిల్స్</Text>
-              {Object.entries(userInfo.handles || {}).map(([h, v]) => (
-                <View key={h} style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>{h.charAt(0).toUpperCase() + h.slice(1)}</Text>
-                  <Text style={styles.infoValue}>{v || '—'}</Text>
-                </View>
-              ))}
+              {(() => {
+                const filled = Object.entries(userInfo.handles || {}).filter(([, v]) => v && v.trim());
+                if (filled.length === 0) return null;
+                return (
+                  <>
+                    <Text style={styles.sectionSubtitle}>Social Handles / సామాజిక హ్యాండిల్స్</Text>
+                    {filled.map(([h, v]) => (
+                      <View key={h} style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>{h.charAt(0).toUpperCase() + h.slice(1)}</Text>
+                        <Text style={styles.infoValue}>{v}</Text>
+                      </View>
+                    ))}
+                  </>
+                );
+              })()}
               <View style={styles.spacer} />
               <Button title="Edit Profile / సవరించు" onPress={() => {
                 setEditDraft({ ...userInfo, address: { ...EMPTY_ADDRESS, ...(userInfo.address||{}) } });
