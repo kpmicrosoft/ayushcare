@@ -7,8 +7,8 @@ export PATH="/usr/local/opt/node@18/bin:$PATH"
 echo "Starting AyushCare backend and frontend..."
 
 # Kill any existing processes on the ports
-echo "Stopping any existing servers on ports 5000 and 19006..."
-lsof -ti:5000 | xargs kill -9 2>/dev/null || true
+echo "Stopping any existing servers on ports 8000 and 19006..."
+lsof -ti:8000 | xargs kill -9 2>/dev/null || true
 lsof -ti:19006 | xargs kill -9 2>/dev/null || true
 
 # Start backend in background
