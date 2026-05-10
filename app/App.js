@@ -428,7 +428,7 @@ export default function App() {
 
   useEffect(() => {
     if (token && step === 'profile') fetchMe();
-    if (token && step === 'records') { fetchMe(); fetchRecords(); }
+    if (token && step === 'records') { fetchMe(); fetchRecords(); setSummaryView(v => v || 'visits'); }
   }, [step, token]);
 
   const fetchMe = async () => {
@@ -590,7 +590,7 @@ export default function App() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.navItem, step === 'records' && styles.navItemActive]}
-            onPress={() => { setAddingVisit(false); setStep('records'); }}>
+            onPress={() => { setAddingVisit(false); setSummaryView('visits'); setStep('records'); }}>
             <Text style={[styles.navText, step === 'records' && styles.navTextActive]}>🏥 Medical Records</Text>
           </TouchableOpacity>
         </View>
