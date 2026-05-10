@@ -352,7 +352,7 @@ export default function App() {
   const [editDraft, setEditDraft] = useState({});
   const [records, setRecords] = useState([]);
   const [summary, setSummary] = useState(null);
-  const [showSummary, setShowSummary] = useState(false);
+  const [summaryView, setSummaryView] = useState(null); // null | 'summary' | 'charts' | 'details'
   const [rescanning, setRescanning] = useState(false);
   // New visit form state
   const [addingVisit, setAddingVisit] = useState(false);
@@ -712,33 +712,44 @@ export default function App() {
 
           {/* Action bar */}
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-            <View style={{ flex: 1, minWidth: 120 }}>
+            <View style={{ flex: 1, minWidth: 110 }}>
               <Button title="← Back" onPress={() => { setAddingVisit(false); setStep('profile'); }} />
             </View>
-            <View style={{ flex: 1, minWidth: 120 }}>
+            <View style={{ flex: 1, minWidth: 110 }}>
               <Button title="+ Add Visit" onPress={() => setAddingVisit(v => !v)} />
             </View>
-            <View style={{ flex: 1, minWidth: 120 }}>
-              <Button title={showSummary ? '📋 Hide Summary' : '📋 Summary'} onPress={() => setShowSummary(s => !s)} />
-            </View>
-            <View style={{ flex: 1, minWidth: 120 }}>
+            <View style={{ flex: 1, minWidth: 110 }}>
               <Button title={rescanning ? 'Scanning…' : '🔄 Rescan'} onPress={rescanSummary} disabled={rescanning} />
             </View>
           </View>
 
-          {/* ── Summary panel ── */}
-          {showSummary && summary && (
+          {/* Summary view tabs */}
+          <View style={styles.tabBar}>
+            {[
+              { key: 'summary', label: '📋 Summary' },
+              { key: 'charts',  label: '📈 Charts'  },
+              { key: 'details', label: '📄 Details'  },
+            ].map(tab => (
+              <TouchableOpacity key={tab.key}
+                style={[styles.tab, summaryView === tab.key && styles.tabActive]}
+                onPress={() => setSummaryView(v => v === tab.key ? null : tab.key)}>
+                <Text style={[styles.tabText, summaryView === tab.key && styles.tabTextActive]}>{tab.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* ── Summary tab ── */}
+          {summaryView === 'summary' && summary && (
             <View style={styles.summaryPanel}>
               <Text style={styles.sectionSubtitle}>
-                Summary — {summary.total_visits} visits
-                {summary.generated_at ? `  (as of ${summary.generated_at.slice(0,10)})` : ''}
+                {summary.total_visits} visits recorded
+                {summary.generated_at ? `  ·  as of ${summary.generated_at.slice(0,10)}` : ''}
               </Text>
 
               {/* All visits table */}
               <Text style={styles.summaryTableTitle}>All Visits / అన్ని సందర్శనలు</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator>
                 <View>
-                  {/* Header */}
                   <View style={[styles.tableRow, styles.tableHeader]}>
                     {['Date','Type','Doctor','Notes'].map(h => (
                       <Text key={h} style={[styles.tableCell, styles.tableHeaderCell, h==='Notes' && {width:200}]}>{h}</Text>
@@ -747,7 +758,7 @@ export default function App() {
                   {(summary.visits || []).map(v => {
                     const rt = RECORD_TYPES.find(r => r.key === v.type) || RECORD_TYPES[RECORD_TYPES.length-1];
                     return (
-                      <View key={v.id} style={styles.tableRow}>
+                      <View key={v.id} style={[styles.tableRow, {backgroundColor: rt.color + '11'}]}>
                         <Text style={styles.tableCell}>{v.date}</Text>
                         <Text style={[styles.tableCell, {color: rt.color, fontWeight:'600'}]}>{rt.emoji} {rt.label}</Text>
                         <Text style={styles.tableCell}>{v.doctor || '—'}</Text>
@@ -757,45 +768,82 @@ export default function App() {
                   })}
                 </View>
               </ScrollView>
+            </View>
+          )}
 
-              {/* Blood work history table + charts */}
-              {summary.blood_work_history && summary.blood_work_history.length > 0 && (() => {
-                const bwDates = summary.blood_work_history.map(b => b.date.slice(2)); // '16-01-12'
-                const bwFull  = summary.blood_work_history.map(b => b.date);
-                const pick = (sec, test) => summary.blood_work_history.map(b => b[sec]?.[test] ?? null);
-                const sections = [
-                  { label: 'CBC',       tests: ['WBC','RBC','Hemoglobin','Hematocrit','MCV','Platelets'] },
-                  { label: 'Metabolic', tests: ['Glucose','BUN','Creatinine','Sodium','Potassium','ALT','AST'] },
-                  { label: 'Lipid',     tests: ['Total Cholesterol','HDL','LDL','Triglycerides'] },
-                ];
-                const chartGroups = [
-                  { title: '🩸 CBC Trends', series: [
-                    { label:'Hemoglobin (g/dL)', color:'#e53e3e', data: pick('CBC','Hemoglobin') },
-                    { label:'WBC (K/μL)',         color:'#3182ce', data: pick('CBC','WBC') },
-                    { label:'Platelets (K/μL)',   color:'#805ad5', data: pick('CBC','Platelets') },
-                  ]},
-                  { title: '⚗️ Metabolic Trends', series: [
-                    { label:'Glucose (mg/dL)', color:'#dd6b20', data: pick('Metabolic','Glucose') },
-                    { label:'Creatinine',      color:'#38a169', data: pick('Metabolic','Creatinine') },
-                    { label:'ALT (U/L)',        color:'#d69e2e', data: pick('Metabolic','ALT') },
-                  ]},
-                  { title: '💛 Lipid Trends', series: [
-                    { label:'Total Cholesterol', color:'#c05621', data: pick('Lipid','Total Cholesterol') },
-                    { label:'LDL',               color:'#e53e3e', data: pick('Lipid','LDL') },
-                    { label:'HDL',               color:'#38a169', data: pick('Lipid','HDL') },
-                    { label:'Triglycerides',     color:'#805ad5', data: pick('Lipid','Triglycerides') },
-                  ]},
-                ];
-                return (
+          {/* ── Charts tab ── */}
+          {summaryView === 'charts' && summary && (() => {
+            const bwDates = (summary.blood_work_history || []).map(b => b.date.slice(2));
+            const pick    = (sec, test) => (summary.blood_work_history || []).map(b => b[sec]?.[test] ?? null);
+            const urDates = (summary.urine_history || []).map(u => u.date.slice(2));
+            const chartGroups = [
+              { title: '🩸 CBC Trends', series: [
+                { label:'Hemoglobin (g/dL)', color:'#e53e3e', data: pick('CBC','Hemoglobin') },
+                { label:'WBC (K/μL)',         color:'#3182ce', data: pick('CBC','WBC') },
+                { label:'Platelets (K/μL)',   color:'#805ad5', data: pick('CBC','Platelets') },
+              ]},
+              { title: '⚗️ Metabolic Trends', series: [
+                { label:'Glucose (mg/dL)', color:'#dd6b20', data: pick('Metabolic','Glucose') },
+                { label:'Creatinine',      color:'#38a169', data: pick('Metabolic','Creatinine') },
+                { label:'ALT (U/L)',        color:'#d69e2e', data: pick('Metabolic','ALT') },
+              ]},
+              { title: '💛 Lipid Trends', series: [
+                { label:'Total Cholesterol', color:'#c05621', data: pick('Lipid','Total Cholesterol') },
+                { label:'LDL',               color:'#e53e3e', data: pick('Lipid','LDL') },
+                { label:'HDL',               color:'#38a169', data: pick('Lipid','HDL') },
+                { label:'Triglycerides',     color:'#805ad5', data: pick('Lipid','Triglycerides') },
+              ]},
+            ];
+            return (
+              <View style={styles.summaryPanel}>
+                {/* Blood work charts */}
+                {bwDates.length >= 2 && (
                   <>
-                    <Text style={[styles.summaryTableTitle, {marginTop: 16}]}>🩸 Blood Work History</Text>
-
-                    {/* Charts */}
+                    <Text style={styles.summaryTableTitle}>🩸 Blood Work Trends</Text>
                     {chartGroups.map(cg => (
                       <TrendChart key={cg.title} title={cg.title} labels={bwDates} series={cg.series} height={200} />
                     ))}
+                  </>
+                )}
 
-                    {/* Scrollable table */}
+                {/* Urine charts */}
+                {urDates.length >= 2 && (
+                  <>
+                    <Text style={[styles.summaryTableTitle, {marginTop:12}]}>🧪 Urine Test Trends</Text>
+                    <TrendChart
+                      title="Physical — pH & Specific Gravity"
+                      labels={urDates}
+                      series={[
+                        { label:'pH', color:'#3182ce',
+                          data: summary.urine_history.map(u => u.Physical?.['pH'] ?? null) },
+                        { label:'Specific Gravity (×1000)', color:'#38a169',
+                          data: summary.urine_history.map(u =>
+                            u.Physical?.['Specific Gravity'] != null
+                              ? Math.round(u.Physical['Specific Gravity'] * 1000) : null) },
+                      ]}
+                      height={190}
+                    />
+                  </>
+                )}
+              </View>
+            );
+          })()}
+
+          {/* ── Details tab ── */}
+          {summaryView === 'details' && summary && (() => {
+            const bwFull = (summary.blood_work_history || []).map(b => b.date);
+            const sections = [
+              { label: 'CBC',       tests: ['WBC','RBC','Hemoglobin','Hematocrit','MCV','Platelets'] },
+              { label: 'Metabolic', tests: ['Glucose','BUN','Creatinine','Sodium','Potassium','ALT','AST'] },
+              { label: 'Lipid',     tests: ['Total Cholesterol','HDL','LDL','Triglycerides'] },
+            ];
+            const chemTests = ['Protein','Glucose','Ketones','Blood','Leukocytes','Nitrite','Bilirubin'];
+            return (
+              <View style={styles.summaryPanel}>
+                {/* Blood work detail table */}
+                {bwFull.length > 0 && (
+                  <>
+                    <Text style={styles.summaryTableTitle}>🩸 Blood Work — Full Values</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator>
                       <View>
                         <View style={[styles.tableRow, styles.tableHeader]}>
@@ -823,33 +871,12 @@ export default function App() {
                       </View>
                     </ScrollView>
                   </>
-                );
-              })()}
+                )}
 
-              {/* Urine test history + chart */}
-              {summary.urine_history && summary.urine_history.length > 0 && (() => {
-                const urDates  = summary.urine_history.map(u => u.date.slice(2));
-                const pickUr   = (sec, key) => summary.urine_history.map(u => u[sec]?.[key] ?? null);
-                const chemTests = ['Protein','Glucose','Ketones','Blood','Leukocytes','Nitrite','Bilirubin'];
-                const toNum  = v => (v === 'Negative' || v === 'Normal') ? 0 : (v === 'Positive' ? 1 : (typeof v === 'number' ? v : null));
-                return (
+                {/* Urine detail table */}
+                {(summary.urine_history || []).length > 0 && (
                   <>
-                    <Text style={[styles.summaryTableTitle, {marginTop: 16}]}>🧪 Urine Test History</Text>
-
-                    {/* Physical metrics chart */}
-                    <TrendChart
-                      title="Physical — pH & Specific Gravity"
-                      labels={urDates}
-                      series={[
-                        { label: 'pH',              color: '#3182ce', data: pickUr('Physical','pH') },
-                        { label: 'Specific Gravity (×1000)', color: '#38a169',
-                          data: summary.urine_history.map(u => u.Physical?.['Specific Gravity'] != null ? Math.round(u.Physical['Specific Gravity'] * 1000) : null) },
-                      ]}
-                      height={190}
-                    />
-
-                    {/* Chemical status grid */}
-                    <Text style={[styles.summaryTableTitle, { marginTop: 8, fontSize: 12 }]}>Chemical Tests (🟢 Neg · 🔴 Pos)</Text>
+                    <Text style={[styles.summaryTableTitle, {marginTop:16}]}>🧪 Urine — Chemical Tests</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator>
                       <View>
                         <View style={[styles.tableRow, styles.tableHeader]}>
@@ -862,24 +889,39 @@ export default function App() {
                           <View key={test} style={styles.tableRow}>
                             <Text style={[styles.tableCell, {width:110, color:'#4a5568'}]}>{test}</Text>
                             {summary.urine_history.map(u => {
-                              const val = u.Chemical?.[test];
+                              const val  = u.Chemical?.[test];
                               const isPos = val && val !== 'Negative' && val !== 'Normal';
                               return (
                                 <Text key={u.date} style={[styles.tableCell, {width:80, textAlign:'center',
-                                  color: isPos ? '#c0392b' : '#27ae60', fontWeight: isPos ? '700' : '400'}]}>
+                                  color: isPos ? '#c0392b' : '#27ae60'}]}>
                                   {isPos ? '🔴' : '🟢'}
                                 </Text>
                               );
                             })}
                           </View>
                         ))}
+                        {/* Physical values */}
+                        <View style={[styles.tableRow, {backgroundColor:'#eef2ff'}]}>
+                          <Text style={[styles.tableCell, {width:110, fontWeight:'700', color:'#1f3c88'}]}>Physical</Text>
+                          {summary.urine_history.map(u => <Text key={u.date} style={[styles.tableCell,{width:80}]} />)}
+                        </View>
+                        {['pH','Specific Gravity','Color','Clarity'].map(key => (
+                          <View key={key} style={styles.tableRow}>
+                            <Text style={[styles.tableCell, {width:110, color:'#4a5568'}]}>{key}</Text>
+                            {summary.urine_history.map(u => (
+                              <Text key={u.date} style={[styles.tableCell, {width:80, textAlign:'right'}]}>
+                                {u.Physical?.[key] ?? '—'}
+                              </Text>
+                            ))}
+                          </View>
+                        ))}
                       </View>
                     </ScrollView>
                   </>
-                );
-              })()}
-            </View>
-          )}
+                )}
+              </View>
+            );
+          })()}
 
           {/* ── Add Visit Form ── */}
           {addingVisit && (
@@ -1268,6 +1310,33 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#b0c4de',
+  },
+  tabBar: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#b0c4de',
+    alignItems: 'center',
+    backgroundColor: '#f7f9fc',
+  },
+  tabActive: {
+    borderColor: '#1f3c88',
+    backgroundColor: '#1f3c88',
+  },
+  tabText: {
+    fontSize: 13,
+    color: '#4a5568',
+    fontWeight: '600',
+  },
+  tabTextActive: {
+    color: '#fff',
   },
   summaryTableTitle: {
     fontSize: 13,
