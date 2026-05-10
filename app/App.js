@@ -28,13 +28,14 @@ const DAYS   = Array.from({ length: 31 }, (_, i) => i + 1);
 
 // Three-dropdown DOB picker — best UX for birth dates decades in the past
 const DOBPicker = ({ value, onChange }) => {
-  const parts  = (value || '').split('-');
-  const year   = parts[0] || '';
-  const month  = parts[1] || '';
-  const day    = parts[2] || '';
+  // Normalise parts so they always match option values (zero-padded MM, DD)
+  const parts = (value || '').split('-');
+  const year  = parts[0] || '';
+  const month = parts[1] ? parts[1].padStart(2, '0') : '';
+  const day   = parts[2] ? parts[2].padStart(2, '0') : '';
 
   const emit = (y, m, d) => {
-    if (y && m && d) onChange(`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`);
+    if (y && m && d) onChange(`${y}-${m}-${d}`);   // already padded
     else onChange('');
   };
 
@@ -51,7 +52,10 @@ const DOBPicker = ({ value, onChange }) => {
         <select value={day} style={selectStyle}
           onChange={e => emit(year, month, e.target.value)}>
           <option value="">Day</option>
-          {DAYS.map(d => <option key={d} value={String(d)}>{d}</option>)}
+          {DAYS.map(d => {
+            const v = String(d).padStart(2, '0');
+            return <option key={v} value={v}>{d}</option>;
+          })}
         </select>
         {/* Month */}
         <select value={month} style={{ ...selectStyle, flex: 2 }}
