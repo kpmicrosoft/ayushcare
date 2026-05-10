@@ -12,9 +12,9 @@ Build a single codebase experience for patients to:
 
 ## Selected architecture
 - Frontend: `Expo` + `React Native Web` + `TypeScript` in `app/`
-- Backend: `Python Flask` API in `api_py/` (runs on port 7071)
-- Database: `Azure Cosmos DB`
-- Deployment: `Azure Static Web Apps` with GitHub auto-deploy
+- Backend: `Python Flask` API in `api_py/` (runs on port 8000)
+- Database: JSON flat-file store in `data/` (no external DB required)
+- Deployment: `Azure Static Web Apps` (frontend) + `Azure App Service` (backend)
 - Domain: GoDaddy custom domain attached to Azure
 
 ## Development plan
@@ -73,4 +73,38 @@ When restarting, review this README and follow the first incomplete item under "
 - `cd api_py && pip install -r requirements.txt`
 - `cd api_py && python3 app.py` (runs on port 8000)
 - `cd app && npm run build` for frontend production builds
-- API URL switching is automatic: `app/config.js` uses `localhost:7071` locally and the Azure backend URL in production
+- API URL switching is automatic: `app/config.js` uses `localhost:8000` locally and the Azure backend URL in production
+
+## Data storage
+
+All data is stored as JSON files under `data/` (gitignored — only the folder scaffold is committed):
+
+```
+data/
+├── metadata/
+│   ├── users.json              # master user registry
+│   └── archive/                # auto-snapshot on every write
+└── users/
+    └── {userId}/               # e.g. usr_a1b2c3
+        ├── profile.json        # name, dob, etc.
+        └── visits/
+            └── 20260509T204440/    # one folder per doctor visit
+                └── record.json
+```
+
+**`metadata/users.json`** maps identity handles to a unique user ID:
+```json
+{
+  "users": [
+    {
+      "id": "usr_a1b2c3",
+      "phone": "+1234567890",
+      "emails": [],
+      "handles": {},
+      "created_at": "2026-05-09T20:44:40"
+    }
+  ]
+}
+```
+
+Users are created automatically on first OTP login. Every write to `users.json` archives the previous version under `metadata/archive/`.
