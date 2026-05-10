@@ -151,6 +151,70 @@ def _save_visit(user_id, data, files=None):
     meta['id'] = visit_id
     return meta
 
+# ── Summary ───────────────────────────────────────────────────────────────────
+SUMMARY_FILE = 'summary.json'
+
+def _build_and_save_summary(user_id):
+    """Scan all visit folders, aggregate data and write summary.json."""
+    vdir = _visits_dir(user_id)
+    if not os.path.exists(vdir):
+        return {}
+
+    all_visits, blood_history = [], []
+
+    for vid in sorted(os.listdir(vdir)):
+        folder = os.path.join(vdir, vid)
+        if not os.path.isdir(folder) or vid == SUMMARY_FILE:
+            continue
+        vmeta_path = os.path.join(folder, 'visit.json')
+        if not os.path.exists(vmeta_path):
+            continue
+        with open(vmeta_path) as f:
+            vm = json.load(f)
+
+        files = [fn for fn in os.listdir(folder)
+                 if fn != 'visit.json' and os.path.isfile(os.path.join(folder, fn))]
+        all_visits.append({
+            'id':     vid,
+            'date':   vm.get('date', ''),
+            'type':   vm.get('type', 'other'),
+            'doctor': vm.get('doctor', ''),
+            'notes':  vm.get('notes', ''),
+            'files':  files,
+        })
+
+        # Extract blood work values if present
+        bw_path = os.path.join(folder, 'blood_work.json')
+        if os.path.exists(bw_path):
+            with open(bw_path) as f:
+                bw = json.load(f)
+            entry = {'date': vm.get('date', ''), 'visit_id': vid}
+            for section in ('CBC', 'Metabolic', 'Lipid'):
+                if section in bw:
+                    entry[section] = {k: v['value'] for k, v in bw[section].items()}
+            blood_history.append(entry)
+
+    # Sort newest first
+    all_visits.sort(key=lambda v: v['date'], reverse=True)
+    blood_history.sort(key=lambda v: v['date'])
+
+    summary = {
+        'generated_at':  datetime.now().isoformat(),
+        'total_visits':  len(all_visits),
+        'visits':        all_visits,
+        'blood_work_history': blood_history,
+    }
+    with open(os.path.join(vdir, SUMMARY_FILE), 'w') as f:
+        json.dump(summary, f, indent=2)
+    return summary
+
+def _load_summary(user_id):
+    path = os.path.join(_visits_dir(user_id), SUMMARY_FILE)
+    if not os.path.exists(path):
+        return _build_and_save_summary(user_id)
+    with open(path) as f:
+        return json.load(f)
+
 # ── OTP & sessions (in-memory, ephemeral) ────────────────────────────────────
 otp_store     = {}
 session_store = {}
@@ -294,7 +358,24 @@ def records():
         data  = request.get_json() or {}
         files = []
     visit = _save_visit(user['id'], data, files)
+    _build_and_save_summary(user['id'])          # keep summary in sync
     return jsonify(visit), 201
+
+# ── Summary routes (must come before /<visit_id> routes) ─────────────────────
+@app.route('/api/records/summary', methods=['GET'])
+def get_summary():
+    user, err, code = _authed_user(request)
+    if err:
+        return err, code
+    return jsonify(_load_summary(user['id'])), 200
+
+@app.route('/api/records/summary/rescan', methods=['POST'])
+def rescan_summary():
+    user, err, code = _authed_user(request)
+    if err:
+        return err, code
+    summary = _build_and_save_summary(user['id'])
+    return jsonify({'message': 'Summary rebuilt', 'total_visits': summary.get('total_visits', 0)}), 200
 
 @app.route('/api/records/<visit_id>', methods=['DELETE'])
 def delete_record(visit_id):
@@ -305,6 +386,7 @@ def delete_record(visit_id):
     if not os.path.exists(vdir):
         return jsonify({'error': 'Visit not found'}), 404
     shutil.rmtree(vdir)
+    _build_and_save_summary(user['id'])          # keep summary in sync
     return jsonify({'message': 'Visit deleted'}), 200
 
 @app.route('/api/records/<visit_id>/files/<filename>', methods=['GET'])

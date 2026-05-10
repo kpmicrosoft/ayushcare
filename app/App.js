@@ -306,6 +306,9 @@ export default function App() {
   const [editMode, setEditMode] = useState(false);
   const [editDraft, setEditDraft] = useState({});
   const [records, setRecords] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [showSummary, setShowSummary] = useState(false);
+  const [rescanning, setRescanning] = useState(false);
   // New visit form state
   const [addingVisit, setAddingVisit] = useState(false);
   const [visitDraft, setVisitDraft] = useState({ date: '', type: 'consultation', doctor: '', notes: '' });
@@ -416,9 +419,29 @@ export default function App() {
 
   const fetchRecords = async () => {
     try {
-      const response = await fetch(`${API_BASE}/records`, { headers: { 'Authorization': `Bearer ${token}` } });
-      if (response.ok) setRecords(await response.json());
+      const [recRes, sumRes] = await Promise.all([
+        fetch(`${API_BASE}/records`,         { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/records/summary`, { headers: { 'Authorization': `Bearer ${token}` } }),
+      ]);
+      if (recRes.ok) setRecords(await recRes.json());
+      if (sumRes.ok) setSummary(await sumRes.json());
     } catch (e) { console.error(e); }
+  };
+
+  const rescanSummary = async () => {
+    setRescanning(true);
+    try {
+      const res = await fetch(`${API_BASE}/records/summary/rescan`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const sumRes = await fetch(`${API_BASE}/records/summary`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (sumRes.ok) setSummary(await sumRes.json());
+        setMessage('Summary rebuilt from all visit folders.');
+      }
+    } catch (e) { console.error(e); }
+    setRescanning(false);
   };
 
   const submitVisit = async () => {
@@ -642,14 +665,98 @@ export default function App() {
         <View style={styles.form}>
           <Text style={styles.sectionTitle}>Medical Records / వైద్య రికార్డులు</Text>
 
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-            <View style={{ flex: 1 }}>
-              <Button title="← Back to Profile" onPress={() => { setAddingVisit(false); setStep('profile'); }} />
+          {/* Action bar */}
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+            <View style={{ flex: 1, minWidth: 120 }}>
+              <Button title="← Back" onPress={() => { setAddingVisit(false); setStep('profile'); }} />
             </View>
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, minWidth: 120 }}>
               <Button title="+ Add Visit" onPress={() => setAddingVisit(v => !v)} />
             </View>
+            <View style={{ flex: 1, minWidth: 120 }}>
+              <Button title={showSummary ? '📋 Hide Summary' : '📋 Summary'} onPress={() => setShowSummary(s => !s)} />
+            </View>
+            <View style={{ flex: 1, minWidth: 120 }}>
+              <Button title={rescanning ? 'Scanning…' : '🔄 Rescan'} onPress={rescanSummary} disabled={rescanning} />
+            </View>
           </View>
+
+          {/* ── Summary panel ── */}
+          {showSummary && summary && (
+            <View style={styles.summaryPanel}>
+              <Text style={styles.sectionSubtitle}>
+                Summary — {summary.total_visits} visits
+                {summary.generated_at ? `  (as of ${summary.generated_at.slice(0,10)})` : ''}
+              </Text>
+
+              {/* All visits table */}
+              <Text style={styles.summaryTableTitle}>All Visits / అన్ని సందర్శనలు</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator>
+                <View>
+                  {/* Header */}
+                  <View style={[styles.tableRow, styles.tableHeader]}>
+                    {['Date','Type','Doctor','Notes'].map(h => (
+                      <Text key={h} style={[styles.tableCell, styles.tableHeaderCell, h==='Notes' && {width:200}]}>{h}</Text>
+                    ))}
+                  </View>
+                  {(summary.visits || []).map(v => {
+                    const rt = RECORD_TYPES.find(r => r.key === v.type) || RECORD_TYPES[RECORD_TYPES.length-1];
+                    return (
+                      <View key={v.id} style={styles.tableRow}>
+                        <Text style={styles.tableCell}>{v.date}</Text>
+                        <Text style={[styles.tableCell, {color: rt.color, fontWeight:'600'}]}>{rt.emoji} {rt.label}</Text>
+                        <Text style={styles.tableCell}>{v.doctor || '—'}</Text>
+                        <Text style={[styles.tableCell, {width:200}]} numberOfLines={2}>{v.notes || '—'}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+
+              {/* Blood work history table */}
+              {summary.blood_work_history && summary.blood_work_history.length > 0 && (() => {
+                const bwDates = summary.blood_work_history.map(b => b.date);
+                const sections = [
+                  { label: 'CBC',       tests: ['WBC','RBC','Hemoglobin','Hematocrit','MCV','Platelets'] },
+                  { label: 'Metabolic', tests: ['Glucose','BUN','Creatinine','Sodium','Potassium','ALT','AST'] },
+                  { label: 'Lipid',     tests: ['Total Cholesterol','HDL','LDL','Triglycerides'] },
+                ];
+                return (
+                  <>
+                    <Text style={[styles.summaryTableTitle, {marginTop: 16}]}>🩸 Blood Work History</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator>
+                      <View>
+                        {/* Date header row */}
+                        <View style={[styles.tableRow, styles.tableHeader]}>
+                          <Text style={[styles.tableCell, styles.tableHeaderCell, {width:160}]}>Test</Text>
+                          {bwDates.map(d => (
+                            <Text key={d} style={[styles.tableCell, styles.tableHeaderCell, {width:90}]}>{d.slice(2)}</Text>
+                          ))}
+                        </View>
+                        {sections.map(sec => [
+                          /* Section heading row */
+                          <View key={sec.label} style={[styles.tableRow, {backgroundColor:'#eef2ff'}]}>
+                            <Text style={[styles.tableCell, {width:160, fontWeight:'700', color:'#1f3c88'}]}>{sec.label}</Text>
+                            {bwDates.map(d => <Text key={d} style={[styles.tableCell,{width:90}]} />)}
+                          </View>,
+                          ...sec.tests.map(test => (
+                            <View key={test} style={styles.tableRow}>
+                              <Text style={[styles.tableCell, {width:160, color:'#4a5568'}]}>{test}</Text>
+                              {summary.blood_work_history.map(b => (
+                                <Text key={b.date} style={[styles.tableCell, {width:90, textAlign:'right'}]}>
+                                  {b[sec.label]?.[test] ?? '—'}
+                                </Text>
+                              ))}
+                            </View>
+                          )),
+                        ])}
+                      </View>
+                    </ScrollView>
+                  </>
+                );
+              })()}
+            </View>
+          )}
 
           {/* ── Add Visit Form ── */}
           {addingVisit && (
@@ -1030,5 +1137,40 @@ const styles = StyleSheet.create({
   deleteBtnText: {
     fontSize: 12,
     color: '#c0392b',
+  },
+  summaryPanel: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#b0c4de',
+  },
+  summaryTableTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#2b3a67',
+    marginBottom: 6,
+    marginTop: 4,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e8edf5',
+  },
+  tableHeader: {
+    backgroundColor: '#1f3c88',
+  },
+  tableCell: {
+    width: 110,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    fontSize: 12,
+    color: '#2b3a67',
+  },
+  tableHeaderCell: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 12,
   },
 });
