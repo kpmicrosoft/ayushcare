@@ -34,7 +34,11 @@ Each item is marked so the project can restart cleanly.
 - [x] Add patient profile view/edit UI
 - [x] Add medical record creation and listing
 - [x] File-based data store (users registry + per-user visit folders)
-- [ ] **Next: Add user registration flow** — collect name, email, social handles on first login and persist to `metadata/users.json`
+- [ ] **Next: Add user registration flow**
+  - Unique account ID: `yyyyMMdd` + 10-digit zero-padded sequence (e.g. `202605090000000001`)
+  - Primary login: phone + OTP
+  - Additional handles: Gmail, Yahoo Mail, Twitter, Instagram, Facebook, WhatsApp
+  - All handles stored in `metadata/users.json` under the same account ID
 - [ ] **Next: Add medical record entry flow** — structured visit records (doctor, diagnosis, prescriptions, notes) saved as timestamped folders under `users/{id}/visits/`
 - [ ] Add access request workflow for doctors/hospitals
 - [ ] Add patient approval step for external access
