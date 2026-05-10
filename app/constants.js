@@ -1,4 +1,13 @@
-// ─── Empty shape defaults ────────────────────────────────────────────────────
+// ─── Social handle metadata (label, brand color, short symbol) ───────────────
+// Change symbol/color here when switching to proper icon library (e.g. FontAwesome brands)
+export const HANDLE_META = {
+  gmail:     { label: 'Gmail',      color: '#EA4335', symbol: 'G'  },
+  yahoo:     { label: 'Yahoo Mail', color: '#6001D2', symbol: 'Y!' },
+  twitter:   { label: 'X (Twitter)',color: '#000000', symbol: '𝕏'  },
+  instagram: { label: 'Instagram',  color: '#E1306C', symbol: '◎'  },
+  facebook:  { label: 'Facebook',   color: '#1877F2', symbol: 'f'  },
+  whatsapp:  { label: 'WhatsApp',   color: '#25D366', symbol: 'W'  },
+};
 export const EMPTY_ADDRESS = {
   line1: '', line2: '', city: '', district: '', state: '', pincode: '', country: 'India',
 };

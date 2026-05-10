@@ -5,7 +5,7 @@ import config from './config';
 import {
   EMPTY_ADDRESS, EMPTY_HANDLES, EMPTY_REG,
   INDIA_STATES, US_STATES, INDIA_CITIES,
-  LOOKUP_APIS,
+  LOOKUP_APIS, HANDLE_META,
 } from './constants';
 
 const API_BASE = config.apiBaseUrl;
@@ -18,7 +18,19 @@ const BiLabel = ({ en, te }) => (
   </View>
 );
 
-const MONTHS = [
+// Small colored brand badge: circle with symbol + label
+const HandleBadge = ({ handleKey, style }) => {
+  const meta = HANDLE_META[handleKey] || { label: handleKey, color: '#6b7a99', symbol: handleKey[0].toUpperCase() };
+  return (
+    <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8 }, style]}>
+      <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: meta.color,
+                     alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{meta.symbol}</Text>
+      </View>
+      <Text style={{ fontSize: 13, fontWeight: '600', color: '#2b3a67' }}>{meta.label}</Text>
+    </View>
+  );
+};
   'January','February','March','April','May','June',
   'July','August','September','October','November','December',
 ];
@@ -507,7 +519,7 @@ export default function App() {
                     <Text style={styles.sectionSubtitle}>Social Handles / సామాజిక హ్యాండిల్స్</Text>
                     {filled.map(([h, v]) => (
                       <View key={h} style={styles.infoRow}>
-                        <Text style={styles.infoLabel}>{h.charAt(0).toUpperCase() + h.slice(1)}</Text>
+                        <HandleBadge handleKey={h} />
                         <Text style={styles.infoValue}>{v}</Text>
                       </View>
                     ))}
@@ -549,10 +561,12 @@ export default function App() {
               />
 
               <Text style={styles.sectionSubtitle}>Social Handles / సామాజిక హ్యాండిల్స్</Text>
-              {[['gmail','Gmail'],['yahoo','Yahoo Mail'],['twitter','Twitter'],['instagram','Instagram'],['facebook','Facebook'],['whatsapp','WhatsApp']].map(([key, label]) => (
+              {Object.keys(HANDLE_META).map((key) => (
                 <View key={key}>
-                  <BiLabel en={label} te={label} />
-                  <TextInput style={styles.input} placeholder={label} autoCapitalize="none"
+                  <HandleBadge handleKey={key} style={{ marginBottom: 4, marginTop: 8 }} />
+                  <TextInput style={styles.input}
+                    placeholder={`${HANDLE_META[key].label} username or email`}
+                    autoCapitalize="none"
                     value={(editDraft.handles||{})[key]||''}
                     onChangeText={(t) => setEditDraft({ ...editDraft, handles: { ...(editDraft.handles||EMPTY_HANDLES), [key]: t } })} />
                 </View>
