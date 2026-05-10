@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Button, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Button, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import config from './config';
 
 const API_BASE = config.apiBaseUrl;
@@ -9,6 +9,24 @@ const EMPTY_ADDRESS = { line1: '', line2: '', city: '', district: '', state: '',
 const EMPTY_HANDLES = { gmail: '', yahoo: '', twitter: '', instagram: '', facebook: '', whatsapp: '' };
 const EMPTY_REG     = { firstName: '', middleName: '', lastName: '', ...EMPTY_HANDLES };
 
+const INDIA_STATES = [
+  'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat',
+  'Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh',
+  'Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan',
+  'Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal',
+  'Delhi','Jammu and Kashmir','Ladakh','Puducherry','Chandigarh',
+  'Dadra and Nagar Haveli and Daman and Diu','Lakshadweep','Andaman and Nicobar Islands',
+];
+const US_STATES = [
+  'Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware',
+  'Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa','Kansas','Kentucky',
+  'Louisiana','Maine','Maryland','Massachusetts','Michigan','Minnesota','Mississippi',
+  'Missouri','Montana','Nebraska','Nevada','New Hampshire','New Jersey','New Mexico',
+  'New York','North Carolina','North Dakota','Ohio','Oklahoma','Oregon','Pennsylvania',
+  'Rhode Island','South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont',
+  'Virginia','Washington','West Virginia','Wisconsin','Wyoming','District of Columbia',
+];
+
 // Bilingual label: English / Telugu
 const BiLabel = ({ en, te }) => (
   <View style={styles.biLabelRow}>
@@ -16,6 +34,143 @@ const BiLabel = ({ en, te }) => (
     <Text style={styles.biLabelTe}>{te}</Text>
   </View>
 );
+
+const AddressForm = ({ address, onChange }) => {
+  const country = address.country || 'India';
+  const isIndia = country === 'India';
+  const isUS    = country === 'United States';
+  const stateList = isIndia ? INDIA_STATES : isUS ? US_STATES : [];
+
+  const [pinStatus, setPinStatus]           = useState('');
+  const [postOffices, setPostOffices]       = useState([]);
+  const [stateQuery, setStateQuery]         = useState(address.state || '');
+  const [stateSuggestions, setStateSuggestions] = useState([]);
+
+  const selectCountry = (c) => {
+    onChange({ ...EMPTY_ADDRESS, country: c });
+    setStateQuery(''); setStateSuggestions([]); setPostOffices([]); setPinStatus('');
+  };
+
+  const handlePinChange = async (val) => {
+    onChange({ ...address, pincode: val });
+    setPostOffices([]); setPinStatus('');
+    if (isIndia && val.length === 6) {
+      setPinStatus('Looking up…');
+      try {
+        const res  = await fetch(`https://api.postalpincode.in/pincode/${val}`);
+        const data = await res.json();
+        if (data[0].Status === 'Success') {
+          const offices  = data[0].PostOffice;
+          const state    = offices[0].State;
+          const district = offices[0].District;
+          setPostOffices(offices.map(o => o.Name));
+          setStateQuery(state);
+          onChange({ ...address, pincode: val, state, district, city: offices[0].Name });
+          setPinStatus(`✅ ${district}, ${state} — ${offices.length} area(s) found`);
+        } else { setPinStatus('❌ PIN code not found'); }
+      } catch { setPinStatus('❌ Lookup failed — check connection'); }
+    } else if (isUS && val.length === 5) {
+      setPinStatus('Looking up…');
+      try {
+        const res = await fetch(`https://api.zippopotam.us/us/${val}`);
+        if (res.ok) {
+          const data  = await res.json();
+          const place = data.places[0];
+          setStateQuery(place.state);
+          onChange({ ...address, pincode: val, state: place.state, city: place['place name'] });
+          setPinStatus(`✅ ${place['place name']}, ${place['state abbreviation']}`);
+        } else { setPinStatus('❌ ZIP code not found'); }
+      } catch { setPinStatus('❌ Lookup failed — check connection'); }
+    }
+  };
+
+  const handleStateQuery = (val) => {
+    setStateQuery(val);
+    onChange({ ...address, state: val });
+    setStateSuggestions(
+      val.length > 0 ? stateList.filter(s => s.toLowerCase().includes(val.toLowerCase())).slice(0, 6) : []
+    );
+  };
+
+  const pickState = (s) => { setStateQuery(s); onChange({ ...address, state: s }); setStateSuggestions([]); };
+  const pickCity  = (po) => onChange({ ...address, city: po });
+
+  return (
+    <View>
+      {/* Country */}
+      <BiLabel en="Country" te="దేశం" />
+      <View style={styles.pillRow}>
+        {['India','United States','Other'].map(c => (
+          <TouchableOpacity key={c} style={[styles.pill, country===c && styles.pillActive]} onPress={() => selectCountry(c)}>
+            <Text style={[styles.pillText, country===c && styles.pillTextActive]}>{c}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Lines */}
+      <BiLabel en="Address Line 1" te="చిరునామా వరుస 1" />
+      <TextInput style={styles.input} placeholder="Door No, Street / ఇంటి నంబర్, వీధి"
+        value={address.line1} onChangeText={t => onChange({ ...address, line1: t })} />
+      <BiLabel en="Address Line 2" te="చిరునామా వరుస 2" />
+      <TextInput style={styles.input} placeholder="Landmark, Area / లాండ్‌మార్క్, ప్రాంతం"
+        value={address.line2} onChangeText={t => onChange({ ...address, line2: t })} />
+
+      {/* PIN / ZIP */}
+      <BiLabel en={isIndia ? 'PIN Code' : isUS ? 'ZIP Code' : 'Postal Code'} te="పిన్ కోడ్" />
+      <TextInput style={styles.input}
+        placeholder={isIndia ? '6-digit PIN' : isUS ? '5-digit ZIP' : 'Postal Code'}
+        keyboardType="numeric" maxLength={isIndia ? 6 : isUS ? 5 : 12}
+        value={address.pincode} onChangeText={handlePinChange} />
+      {!!pinStatus && <Text style={styles.lookupStatus}>{pinStatus}</Text>}
+
+      {/* India post office picker */}
+      {postOffices.length > 0 && (
+        <View>
+          <BiLabel en="Select Area / Post Office" te="ప్రాంతం ఎంచుకోండి" />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+            {postOffices.map(po => (
+              <TouchableOpacity key={po} style={[styles.pill, address.city===po && styles.pillActive]} onPress={() => pickCity(po)}>
+                <Text style={[styles.pillText, address.city===po && styles.pillTextActive]}>{po}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* City (free-form when no post offices) */}
+      {postOffices.length === 0 && (
+        <>
+          <BiLabel en={isIndia ? 'Village / Town / City' : 'City'} te="గ్రామం / పట్టణం" />
+          <TextInput style={styles.input} placeholder={isIndia ? 'Village or City / గ్రామం లేదా నగరం' : 'City'}
+            value={address.city} onChangeText={t => onChange({ ...address, city: t })} />
+        </>
+      )}
+
+      {/* District — India only */}
+      {isIndia && (
+        <>
+          <BiLabel en="District" te="జిల్లా" />
+          <TextInput style={styles.input} placeholder="District / జిల్లా"
+            value={address.district} onChangeText={t => onChange({ ...address, district: t })} />
+        </>
+      )}
+
+      {/* State with type-ahead */}
+      <BiLabel en={isUS ? 'State' : isIndia ? 'State' : 'State / Province'} te="రాష్ట్రం" />
+      <TextInput style={styles.input} placeholder="State / రాష్ట్రం"
+        value={stateQuery} onChangeText={handleStateQuery} />
+      {stateSuggestions.length > 0 && (
+        <View style={styles.suggestionList}>
+          {stateSuggestions.map(s => (
+            <TouchableOpacity key={s} style={styles.suggestion} onPress={() => pickState(s)}>
+              <Text style={styles.suggestionText}>{s}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+};
 
 export default function App() {
   const [phone, setPhone] = useState('');
@@ -291,22 +446,10 @@ export default function App() {
                 value={editDraft.dob||''} onChangeText={(t) => setEditDraft({ ...editDraft, dob: t })} />
 
               <Text style={styles.sectionSubtitle}>Address / చిరునామా</Text>
-              {[
-                ['line1',    'Address Line 1',              'చిరునామా వరుస 1',       'Door No, Street'],
-                ['line2',    'Address Line 2',              'చిరునామా వరుస 2',       'Landmark, Area'],
-                ['city',     'Village / Town / City',       'గ్రామం / పట్టణం / నగరం','Village or City'],
-                ['district', 'District',                    'జిల్లా',                'District'],
-                ['state',    'State / Province',            'రాష్ట్రం',               'State'],
-                ['pincode',  'PIN / ZIP Code',              'పిన్ కోడ్',             '500001'],
-                ['country',  'Country',                     'దేశం',                  'India'],
-              ].map(([key, en, te, ph]) => (
-                <View key={key}>
-                  <BiLabel en={en} te={te} />
-                  <TextInput style={styles.input} placeholder={ph}
-                    value={(editDraft.address||{})[key]||''}
-                    onChangeText={(t) => setEditDraft({ ...editDraft, address: { ...(editDraft.address||EMPTY_ADDRESS), [key]: t } })} />
-                </View>
-              ))}
+              <AddressForm
+                address={{ ...EMPTY_ADDRESS, ...(editDraft.address || {}) }}
+                onChange={(addr) => setEditDraft({ ...editDraft, address: addr })}
+              />
 
               <Text style={styles.sectionSubtitle}>Social Handles / సామాజిక హ్యాండిల్స్</Text>
               {[['gmail','Gmail'],['yahoo','Yahoo Mail'],['twitter','Twitter'],['instagram','Instagram'],['facebook','Facebook'],['whatsapp','WhatsApp']].map(([key, label]) => (
@@ -442,6 +585,58 @@ const styles = StyleSheet.create({
   biLabelTe: {
     fontSize: 13,
     color: '#6b7a99',
+  },
+  pillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  pill: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#b0c4de',
+    backgroundColor: '#fff',
+    marginRight: 6,
+    marginBottom: 6,
+  },
+  pillActive: {
+    backgroundColor: '#1f3c88',
+    borderColor: '#1f3c88',
+  },
+  pillText: {
+    fontSize: 13,
+    color: '#2b3a67',
+  },
+  pillTextActive: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  lookupStatus: {
+    fontSize: 12,
+    color: '#2b3a67',
+    marginBottom: 10,
+    marginTop: -6,
+  },
+  suggestionList: {
+    borderWidth: 1,
+    borderColor: '#b0c4de',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    marginBottom: 12,
+    marginTop: -8,
+  },
+  suggestion: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e8edf5',
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: '#1f3c88',
   },
   infoRow: {
     flexDirection: 'row',
