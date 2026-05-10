@@ -52,15 +52,11 @@ az staticwebapp create \
 ## Step 3: Configure Environment Variables
 
 ### Frontend
-The frontend should point at your deployed backend URL. Update `app/config.js` or environment variables as needed:
-```js
-const config = {
-  apiBaseUrl: 'https://ayushcare-api.azurewebsites.net',
-};
-export default config;
-```
+The frontend automatically selects the API URL based on the environment via `app/config.js`:
+- **Local**: `http://localhost:7071/api`
+- **Production**: `https://ayushcare-api-gnfudrg6ejbadrh0.eastus2-01.azurewebsites.net/api`
 
-The Python backend currently does not use Cosmos DB, so no database connection string is required.
+No manual changes are needed. If the backend URL changes, update `PROD_API_URL` in `app/config.js`.
 
 ## Step 4: Deploy
 
@@ -96,7 +92,7 @@ az webapp up --resource-group ayushcare-rg --name ayushcare-api --sku B1 --runti
 ## Step 6: Verify Deployment
 
 1. **Frontend**: Visit `https://ayushcare-web.azurestaticapps.net`
-2. **Backend**: Test `https://ayushcare-api.azurewebsites.net/api/sendOtp`
+2. **Backend**: Test `https://ayushcare-api-gnfudrg6ejbadrh0.eastus2-01.azurewebsites.net/api/sendOtp`
 3. Confirm the full login flow works end-to-end
 
 ## Troubleshooting
