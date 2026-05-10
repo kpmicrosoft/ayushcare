@@ -382,7 +382,7 @@ export default function App() {
   };
 
   const handleDemoLogin = () => {
-    setPhone('7327184414');
+    setPhone('9866492111');
     setToken('demo-token');
     setAccountId('demo');
     setStep('profile');

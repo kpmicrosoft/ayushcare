@@ -12,9 +12,9 @@ BASE   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REG    = os.path.join(BASE, 'data', 'metadata', 'users.json')
 with open(REG) as f:
     registry = json.load(f)
-user = next((u for u in registry['users'] if u.get('phone') == '7327184414'), None)
+user = next((u for u in registry['users'] if u.get('phone') == '9866492111'), None)
 if not user:
-    sys.exit('Demo user 7327184414 not found in users.json — log in once first.')
+    sys.exit('Demo user 9866492111 not found in users.json — log in once first.')
 USER_ID   = user['id']
 VISITS_DIR = os.path.join(BASE, 'data', 'users', USER_ID, 'visits')
 SAMPLE_DIR = os.path.join(BASE, 'data', 'sample_data', 'visits')
