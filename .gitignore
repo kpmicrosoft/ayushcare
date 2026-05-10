@@ -17,3 +17,7 @@ yarn-error.log*
 dist/
 azure-credentials.json
 api_py/__pycache__/*
+
+# User data — keep folder structure but not content
+data/**/*.json
+data/users/*/
