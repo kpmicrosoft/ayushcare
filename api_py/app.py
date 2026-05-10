@@ -324,10 +324,9 @@ def me():
     for u in registry['users']:
         if u['id'] == user['id']:
             for field in ('firstName', 'middleName', 'lastName'):
-                if field in data:
-                    u[field] = data[field]
+                u[field] = data.get(field, u.get(field, ''))
             if 'handles' in data:
-                u.setdefault('handles', {}).update(data['handles'])
+                u['handles'] = data['handles']   # full replace (not merge)
             if 'address' in data:
                 u['address'] = {
                     'line1':    data['address'].get('line1', ''),
@@ -337,6 +336,8 @@ def me():
                     'state':    data['address'].get('state', ''),
                     'pincode':  data['address'].get('pincode', ''),
                     'country':  data['address'].get('country', 'India'),
+                    'zip':      data['address'].get('zip', ''),
+                    'county':   data['address'].get('county', ''),
                 }
             break
     _save_registry(registry)

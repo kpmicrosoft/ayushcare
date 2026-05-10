@@ -451,10 +451,13 @@ export default function App() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
-          name: editDraft.name,
-          email: editDraft.email,
-          dob: editDraft.dob,
-          handles: editDraft.handles || {},
+          firstName:  editDraft.firstName  || '',
+          middleName: editDraft.middleName || '',
+          lastName:   editDraft.lastName   || '',
+          email:      editDraft.email      || '',
+          dob:        editDraft.dob        || '',
+          handles:    editDraft.handles    || {},
+          address:    editDraft.address    || {},
         }),
       });
       if (response.ok) {
