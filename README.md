@@ -40,10 +40,10 @@ Each item is marked so the project can restart cleanly.
 - [ ] Perform manual validation of profile and record flows
 
 ### Phase 3: deployment and integration
-- [ ] Connect repository to GitHub (initialize repo if needed)
-- [ ] Create Azure Static Web App and attach GitHub workflow
-- [ ] Deploy frontend + backend to Azure
-- [ ] Configure Cosmos DB and application settings
+- [x] Connect repository to GitHub (initialize repo if needed)
+- [x] Create Azure Static Web App and attach GitHub workflow
+- [x] Deploy frontend + backend to Azure
+- [x] Configure data storage (JSON flat-file, no Cosmos DB needed)
 - [ ] Connect GoDaddy custom domain to Azure Static Web Apps
 - [ ] Add CI test pipeline for backend and frontend
 - [ ] Perform end-to-end validation after deployment
@@ -59,7 +59,12 @@ When restarting, review this README and follow the first incomplete item under "
 - [x] Mock OTP flow selected for initial MVP
 - [x] Backend OTP endpoints implemented
 - [x] Backend unit tests passing
-- [ ] Frontend UI validation pending
+- [x] Frontend UI validation complete
+- [x] Frontend deployed to Azure Static Web Apps (auto-deploy on push to `main`)
+- [x] Backend deployed to Azure App Service (auto-deploy on push to `main`)
+- [x] Frontend connects to backend via externalized config (`app/config.js`)
+- [ ] GoDaddy custom domain pending
+- [ ] CI test pipeline pending
 
 ## Notes for the assistant
 - Keep this file updated as tasks are completed.
