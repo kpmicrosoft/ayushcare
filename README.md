@@ -33,6 +33,9 @@ Each item is marked so the project can restart cleanly.
 ### Phase 2: patient core features
 - [x] Add patient profile view/edit UI
 - [x] Add medical record creation and listing
+- [x] File-based data store (users registry + per-user visit folders)
+- [ ] **Next: Add user registration flow** — collect name, email, social handles on first login and persist to `metadata/users.json`
+- [ ] **Next: Add medical record entry flow** — structured visit records (doctor, diagnosis, prescriptions, notes) saved as timestamped folders under `users/{id}/visits/`
 - [ ] Add access request workflow for doctors/hospitals
 - [ ] Add patient approval step for external access
 - [ ] Add backend tests for patient/profile record APIs
