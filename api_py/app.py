@@ -27,7 +27,7 @@ for d in (METADATA_DIR, ARCHIVE_DIR, USERS_DIR):
 # ── User registry ─────────────────────────────────────────────────────────────
 def _load_registry():
     if not os.path.exists(REGISTRY):
-        return {'users': []}
+        return {'next_seq': 1, 'users': []}
     with open(REGISTRY) as f:
         return json.load(f)
 
@@ -44,13 +44,29 @@ def _find_user_by_phone(phone):
             return user
     return None
 
+def _find_user_by_handle(handle_type, value):
+    for user in _load_registry()['users']:
+        if user.get('handles', {}).get(handle_type) == value:
+            return user
+    return None
+
+def _generate_account_id(registry):
+    date_part = datetime.utcnow().strftime('%Y%m%d')
+    seq = registry.get('next_seq', 1)
+    registry['next_seq'] = seq + 1
+    return f"{date_part}{seq:010d}"
+
 def _create_user(phone):
     registry = _load_registry()
     user = {
-        'id': 'usr_' + uuid.uuid4().hex[:8],
+        'id': _generate_account_id(registry),
         'phone': phone,
-        'emails': [],
-        'handles': {},
+        'name': '',
+        'handles': {
+            'gmail': '', 'yahoo': '', 'twitter': '',
+            'instagram': '', 'facebook': '', 'whatsapp': ''
+        },
+        'registered': False,
         'created_at': datetime.utcnow().isoformat(),
     }
     registry['users'].append(user)
@@ -150,10 +166,44 @@ def verify_otp():
     if code != phone:
         return jsonify({'error': 'Invalid OTP'}), 400
     otp_store.pop(phone, None)
-    _get_or_create_user(phone)
-    return jsonify({'token': create_session(phone)}), 200
+    user = _get_or_create_user(phone)
+    return jsonify({
+        'token': create_session(phone),
+        'is_new_user': not user.get('registered', False),
+        'account_id': user['id'],
+    }), 200
 
-@app.route('/api/profile', methods=['GET', 'POST'])
+@app.route('/api/register', methods=['POST'])
+def register():
+    user, err, code = _authed_user(request)
+    if err:
+        return err, code
+    data = request.get_json()
+    registry = _load_registry()
+    for u in registry['users']:
+        if u['id'] == user['id']:
+            u['name'] = data.get('name', '')
+            u['handles'] = {
+                'gmail':     data.get('gmail', ''),
+                'yahoo':     data.get('yahoo', ''),
+                'twitter':   data.get('twitter', ''),
+                'instagram': data.get('instagram', ''),
+                'facebook':  data.get('facebook', ''),
+                'whatsapp':  data.get('whatsapp', ''),
+            }
+            u['registered'] = True
+            break
+    _save_registry(registry)
+    return jsonify({'message': 'Registration complete', 'account_id': user['id']}), 200
+
+@app.route('/api/me', methods=['GET'])
+def me():
+    user, err, code = _authed_user(request)
+    if err:
+        return err, code
+    return jsonify(user), 200
+
+
 def profile():
     user, err, code = _authed_user(request)
     if err:
