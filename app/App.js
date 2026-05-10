@@ -726,6 +726,7 @@ export default function App() {
           {/* Summary view tabs */}
           <View style={styles.tabBar}>
             {[
+              { key: 'visits',  label: '🏥 Visits'  },
               { key: 'summary', label: '📋 Summary' },
               { key: 'charts',  label: '📈 Charts'  },
               { key: 'details', label: '📄 Details'  },
@@ -738,7 +739,57 @@ export default function App() {
             ))}
           </View>
 
-          {/* ── Summary tab ── */}
+          {/* ── Visits tab ── */}
+          {summaryView === 'visits' && (
+            <View>
+              {records.length === 0 && (
+                <Text style={styles.empty}>No visits yet. Tap "+ Add Visit" to record your first visit.</Text>
+              )}
+              {records.map(rec => (
+                <View key={rec.id} style={styles.visitCard}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <RecordTypeBadge typeKey={rec.type} />
+                    <Text style={styles.visitDate}>{rec.date}</Text>
+                  </View>
+
+                  {!!rec.doctor && (
+                    <Text style={styles.visitDoctor}>🩺 {rec.doctor}</Text>
+                  )}
+                  {!!rec.notes && (
+                    <Text style={styles.visitNotes}>{rec.notes}</Text>
+                  )}
+
+                  {rec.files && rec.files.length > 0 && (
+                    <View style={{ marginTop: 8 }}>
+                      <Text style={{ fontSize: 12, color: '#6b7a99', marginBottom: 4 }}>
+                        Attachments / జోడింపులు ({rec.files.length})
+                      </Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                        {rec.files.map(fn => (
+                          Platform.OS === 'web'
+                            ? <a key={fn} href={fileUrl(rec.id, fn)} target="_blank" rel="noreferrer"
+                                 style={{ textDecoration: 'none' }}>
+                                <View style={styles.fileChip}>
+                                  <Text style={styles.fileChipText}>{fileIcon(fn)} {fn}</Text>
+                                </View>
+                              </a>
+                            : <View key={fn} style={styles.fileChip}>
+                                <Text style={styles.fileChipText}>{fileIcon(fn)} {fn}</Text>
+                              </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+
+                  <TouchableOpacity style={styles.deleteBtn} onPress={() => deleteVisit(rec.id)}>
+                    <Text style={styles.deleteBtnText}>🗑 Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+
+
           {summaryView === 'summary' && summary && (
             <View style={styles.summaryPanel}>
               <Text style={styles.sectionSubtitle}>
@@ -994,51 +1045,6 @@ export default function App() {
             </View>
           )}
 
-          {/* ── Visit cards ── */}
-          {records.length === 0 && !addingVisit && (
-            <Text style={styles.empty}>No visits yet. Tap "+ Add Visit" to record your first visit.</Text>
-          )}
-          {records.map(rec => (
-            <View key={rec.id} style={styles.visitCard}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <RecordTypeBadge typeKey={rec.type} />
-                <Text style={styles.visitDate}>{rec.date}</Text>
-              </View>
-
-              {!!rec.doctor && (
-                <Text style={styles.visitDoctor}>🩺 {rec.doctor}</Text>
-              )}
-              {!!rec.notes && (
-                <Text style={styles.visitNotes}>{rec.notes}</Text>
-              )}
-
-              {rec.files && rec.files.length > 0 && (
-                <View style={{ marginTop: 8 }}>
-                  <Text style={{ fontSize: 12, color: '#6b7a99', marginBottom: 4 }}>
-                    Attachments / జోడింపులు ({rec.files.length})
-                  </Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                    {rec.files.map(fn => (
-                      Platform.OS === 'web'
-                        ? <a key={fn} href={fileUrl(rec.id, fn)} target="_blank" rel="noreferrer"
-                             style={{ textDecoration: 'none' }}>
-                            <View style={styles.fileChip}>
-                              <Text style={styles.fileChipText}>{fileIcon(fn)} {fn}</Text>
-                            </View>
-                          </a>
-                        : <View key={fn} style={styles.fileChip}>
-                            <Text style={styles.fileChipText}>{fileIcon(fn)} {fn}</Text>
-                          </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              <TouchableOpacity style={styles.deleteBtn} onPress={() => deleteVisit(rec.id)}>
-                <Text style={styles.deleteBtnText}>🗑 Delete</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
         </View>
       )}
 
