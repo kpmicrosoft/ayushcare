@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Button, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Button, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import config from './config';
 import {
   EMPTY_ADDRESS, EMPTY_HANDLES, EMPTY_REG,
@@ -17,6 +17,65 @@ const BiLabel = ({ en, te }) => (
     <Text style={styles.biLabelTe}>{te}</Text>
   </View>
 );
+
+const MONTHS = [
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December',
+];
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS  = Array.from({ length: CURRENT_YEAR - 1899 }, (_, i) => CURRENT_YEAR - i);
+const DAYS   = Array.from({ length: 31 }, (_, i) => i + 1);
+
+// Three-dropdown DOB picker — best UX for birth dates decades in the past
+const DOBPicker = ({ value, onChange }) => {
+  const parts  = (value || '').split('-');
+  const year   = parts[0] || '';
+  const month  = parts[1] || '';
+  const day    = parts[2] || '';
+
+  const emit = (y, m, d) => {
+    if (y && m && d) onChange(`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`);
+    else onChange('');
+  };
+
+  const selectStyle = {
+    height: 48, borderColor: '#b0c4de', borderWidth: 1, borderRadius: 8,
+    paddingHorizontal: 10, backgroundColor: '#ffffff', fontSize: 15,
+    color: '#2b3a67', flex: 1, cursor: 'pointer',
+  };
+
+  if (Platform.OS === 'web') {
+    return (
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+        {/* Day */}
+        <select value={day} style={selectStyle}
+          onChange={e => emit(year, month, e.target.value)}>
+          <option value="">Day</option>
+          {DAYS.map(d => <option key={d} value={String(d)}>{d}</option>)}
+        </select>
+        {/* Month */}
+        <select value={month} style={{ ...selectStyle, flex: 2 }}
+          onChange={e => emit(year, e.target.value, day)}>
+          <option value="">Month</option>
+          {MONTHS.map((m, i) => (
+            <option key={m} value={String(i + 1).padStart(2,'0')}>{m}</option>
+          ))}
+        </select>
+        {/* Year */}
+        <select value={year} style={{ ...selectStyle, flex: 1.5 }}
+          onChange={e => emit(e.target.value, month, day)}>
+          <option value="">Year</option>
+          {YEARS.map(y => <option key={y} value={String(y)}>{y}</option>)}
+        </select>
+      </View>
+    );
+  }
+  // Native fallback — plain text input
+  return (
+    <TextInput style={styles.input} placeholder="YYYY-MM-DD" keyboardType="numeric"
+      value={value || ''} onChangeText={onChange} />
+  );
+};
 
 const AddressForm = ({ address, onChange }) => {
   const country = address.country || 'India';
@@ -477,8 +536,7 @@ export default function App() {
               <TextInput style={styles.input} placeholder="Email" keyboardType="email-address"
                 value={editDraft.email||''} onChangeText={(t) => setEditDraft({ ...editDraft, email: t })} />
               <BiLabel en="Date of Birth" te="పుట్టిన తేదీ" />
-              <TextInput style={styles.input} placeholder="YYYY-MM-DD"
-                value={editDraft.dob||''} onChangeText={(t) => setEditDraft({ ...editDraft, dob: t })} />
+              <DOBPicker value={editDraft.dob||''} onChange={(d) => setEditDraft({ ...editDraft, dob: d })} />
 
               <Text style={styles.sectionSubtitle}>Address / చిరునామా</Text>
               <AddressForm
