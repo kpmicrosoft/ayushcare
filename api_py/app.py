@@ -196,14 +196,33 @@ def register():
     _save_registry(registry)
     return jsonify({'message': 'Registration complete', 'account_id': user['id']}), 200
 
-@app.route('/api/me', methods=['GET'])
+@app.route('/api/me', methods=['GET', 'PUT'])
 def me():
     user, err, code = _authed_user(request)
     if err:
         return err, code
-    return jsonify(user), 200
+    if request.method == 'GET':
+        # Merge registry entry with profile.json
+        profile = _load_profile(user['id'])
+        return jsonify({**user, 'email': profile.get('email', ''), 'dob': profile.get('dob', '')}), 200
+    # PUT — update editable fields only (phone + id are immutable)
+    data = request.get_json()
+    registry = _load_registry()
+    for u in registry['users']:
+        if u['id'] == user['id']:
+            if 'name' in data:
+                u['name'] = data['name']
+            if 'handles' in data:
+                u['handles'].update(data['handles'])
+            break
+    _save_registry(registry)
+    _save_profile(user['id'], {
+        'email': data.get('email', ''),
+        'dob':   data.get('dob', ''),
+    })
+    return jsonify({'message': 'Profile updated'}), 200
 
-
+@app.route('/api/profile', methods=['GET', 'POST'])
 def profile():
     user, err, code = _authed_user(request)
     if err:

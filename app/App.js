@@ -13,7 +13,9 @@ export default function App() {
   const [token, setToken] = useState('');
   const [accountId, setAccountId] = useState('');
   const [reg, setReg] = useState({ name: '', gmail: '', yahoo: '', twitter: '', instagram: '', facebook: '', whatsapp: '' });
-  const [profile, setProfile] = useState({ name: '', email: '', dob: '' });
+  const [userInfo, setUserInfo] = useState(null);   // full profile from /api/me
+  const [editMode, setEditMode] = useState(false);
+  const [editDraft, setEditDraft] = useState({});   // working copy while editing
   const [records, setRecords] = useState([]);
   const [newRecord, setNewRecord] = useState({ title: '', description: '', date: '' });
 
@@ -82,15 +84,39 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (step === 'profile' && token) fetchProfile();
+    if (step === 'profile' && token) fetchMe();
     else if (step === 'records' && token) fetchRecords();
   }, [step, token]);
 
-  const fetchProfile = async () => {
+  const fetchMe = async () => {
     try {
-      const response = await fetch(`${API_BASE}/profile`, { headers: { 'Authorization': `Bearer ${token}` } });
-      if (response.ok) setProfile(await response.json());
+      const response = await fetch(`${API_BASE}/me`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (response.ok) {
+        const data = await response.json();
+        setUserInfo(data);
+        setEditDraft(data);
+      }
     } catch (e) { console.error(e); }
+  };
+
+  const saveProfile = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          name: editDraft.name,
+          email: editDraft.email,
+          dob: editDraft.dob,
+          handles: editDraft.handles || {},
+        }),
+      });
+      if (response.ok) {
+        setEditMode(false);
+        fetchMe();
+        setMessage('Profile updated successfully!');
+      } else { setMessage('Failed to update profile.'); }
+    } catch { setMessage('Unable to save profile.'); }
   };
 
   const fetchRecords = async () => {
@@ -172,19 +198,70 @@ export default function App() {
       )}
 
       {/* ── Profile ── */}
-      {step === 'profile' && (
+      {step === 'profile' && userInfo && (
         <View style={styles.form}>
           <Text style={styles.sectionTitle}>Patient Profile</Text>
-          {accountId ? <Text style={styles.accountId}>Account: {accountId}</Text> : null}
-          <TextInput style={styles.input} placeholder="Full Name"
-            value={profile.name} onChangeText={(t) => setProfile({ ...profile, name: t })} />
-          <TextInput style={styles.input} placeholder="Email" keyboardType="email-address"
-            value={profile.email} onChangeText={(t) => setProfile({ ...profile, email: t })} />
-          <TextInput style={styles.input} placeholder="Date of Birth (YYYY-MM-DD)"
-            value={profile.dob} onChangeText={(t) => setProfile({ ...profile, dob: t })} />
-          <Button title="Save Profile" onPress={saveProfile} />
-          <View style={styles.spacer} />
-          <Button title="View Medical Records" onPress={() => setStep('records')} />
+
+          {/* Read-only identity */}
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Account ID</Text>
+            <Text style={styles.infoValueMono}>{userInfo.id}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Phone</Text>
+            <Text style={styles.infoValue}>{userInfo.phone}</Text>
+          </View>
+
+          {!editMode ? (
+            <>
+              {/* View mode */}
+              {[
+                ['Name',      userInfo.name],
+                ['Email',     userInfo.email],
+                ['Date of Birth', userInfo.dob],
+              ].map(([label, val]) => (
+                <View key={label} style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>{label}</Text>
+                  <Text style={styles.infoValue}>{val || '—'}</Text>
+                </View>
+              ))}
+              <Text style={styles.label}>Social Handles</Text>
+              {Object.entries(userInfo.handles || {}).map(([h, v]) => (
+                <View key={h} style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>{h.charAt(0).toUpperCase() + h.slice(1)}</Text>
+                  <Text style={styles.infoValue}>{v || '—'}</Text>
+                </View>
+              ))}
+              <View style={styles.spacer} />
+              <Button title="Edit Profile" onPress={() => { setEditDraft({...userInfo}); setEditMode(true); }} />
+              <View style={styles.spacer} />
+              <Button title="View Medical Records" onPress={() => setStep('records')} />
+            </>
+          ) : (
+            <>
+              {/* Edit mode */}
+              <Text style={styles.label}>Name *</Text>
+              <TextInput style={styles.input} placeholder="Full Name"
+                value={editDraft.name} onChangeText={(t) => setEditDraft({ ...editDraft, name: t })} />
+              <Text style={styles.label}>Email</Text>
+              <TextInput style={styles.input} placeholder="Email" keyboardType="email-address"
+                value={editDraft.email} onChangeText={(t) => setEditDraft({ ...editDraft, email: t })} />
+              <Text style={styles.label}>Date of Birth</Text>
+              <TextInput style={styles.input} placeholder="YYYY-MM-DD"
+                value={editDraft.dob} onChangeText={(t) => setEditDraft({ ...editDraft, dob: t })} />
+              <Text style={styles.label}>Social Handles</Text>
+              {['gmail','yahoo','twitter','instagram','facebook','whatsapp'].map((h) => (
+                <TextInput key={h} style={styles.input}
+                  placeholder={h.charAt(0).toUpperCase() + h.slice(1)}
+                  autoCapitalize="none"
+                  value={(editDraft.handles || {})[h] || ''}
+                  onChangeText={(t) => setEditDraft({ ...editDraft, handles: { ...(editDraft.handles || {}), [h]: t } })} />
+              ))}
+              <Button title="Save Changes" onPress={saveProfile} />
+              <View style={styles.spacer} />
+              <Button title="Cancel" onPress={() => setEditMode(false)} />
+            </>
+          )}
         </View>
       )}
 
@@ -279,6 +356,30 @@ const styles = StyleSheet.create({
     color: '#9aaac4',
     marginVertical: 12,
     textAlign: 'center',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    paddingVertical: 8,
+    borderBottomColor: '#e8edf5',
+    borderBottomWidth: 1,
+    marginBottom: 4,
+  },
+  infoLabel: {
+    width: 120,
+    fontSize: 13,
+    color: '#6b7a99',
+    fontWeight: '600',
+  },
+  infoValue: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1f3c88',
+  },
+  infoValueMono: {
+    flex: 1,
+    fontSize: 13,
+    color: '#1f3c88',
+    fontFamily: 'monospace',
   },
   record: {
     padding: 12,
