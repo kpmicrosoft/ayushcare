@@ -10,6 +10,54 @@ import {
 
 const API_BASE = config.apiBaseUrl;
 
+// ── Chart.js (web only) ────────────────────────────────────────────────────────
+let LineChart = null;
+if (Platform.OS === 'web') {
+  const ChartJS = require('chart.js');
+  ChartJS.Chart.register(
+    ChartJS.CategoryScale, ChartJS.LinearScale,
+    ChartJS.PointElement, ChartJS.LineElement,
+    ChartJS.Title, ChartJS.Tooltip, ChartJS.Legend, ChartJS.Filler,
+  );
+  LineChart = require('react-chartjs-2').Line;
+}
+
+// Render a single line chart — each series is { label, color, data[] }
+const TrendChart = ({ title, labels, series, height = 180 }) => {
+  if (!LineChart || !labels || labels.length < 2) return null;
+  const data = {
+    labels,
+    datasets: series.map(s => ({
+      label:       s.label,
+      data:        s.data,
+      borderColor: s.color,
+      backgroundColor: s.color + '22',
+      borderWidth: 2,
+      pointRadius: 3,
+      tension:     0.3,
+      fill:        false,
+      spanGaps:    true,
+    })),
+  };
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+      title:  { display: !!title, text: title, font: { size: 13, weight: 'bold' } },
+    },
+    scales: {
+      x: { ticks: { font: { size: 10 }, maxRotation: 45 } },
+      y: { ticks: { font: { size: 10 } } },
+    },
+  };
+  return (
+    <View style={{ height, marginBottom: 16 }}>
+      <LineChart data={data} options={options} />
+    </View>
+  );
+};
+
 // Bilingual label: English / Telugu
 const BiLabel = ({ en, te }) => (
   <View style={styles.biLabelRow}>
@@ -713,31 +761,56 @@ export default function App() {
                 </View>
               </ScrollView>
 
-              {/* Blood work history table */}
+              {/* Blood work history table + charts */}
               {summary.blood_work_history && summary.blood_work_history.length > 0 && (() => {
-                const bwDates = summary.blood_work_history.map(b => b.date);
+                const bwDates = summary.blood_work_history.map(b => b.date.slice(2)); // '16-01-12'
+                const bwFull  = summary.blood_work_history.map(b => b.date);
+                const pick = (sec, test) => summary.blood_work_history.map(b => b[sec]?.[test] ?? null);
                 const sections = [
                   { label: 'CBC',       tests: ['WBC','RBC','Hemoglobin','Hematocrit','MCV','Platelets'] },
                   { label: 'Metabolic', tests: ['Glucose','BUN','Creatinine','Sodium','Potassium','ALT','AST'] },
                   { label: 'Lipid',     tests: ['Total Cholesterol','HDL','LDL','Triglycerides'] },
                 ];
+                const chartGroups = [
+                  { title: '🩸 CBC Trends', series: [
+                    { label:'Hemoglobin (g/dL)', color:'#e53e3e', data: pick('CBC','Hemoglobin') },
+                    { label:'WBC (K/μL)',         color:'#3182ce', data: pick('CBC','WBC') },
+                    { label:'Platelets (K/μL)',   color:'#805ad5', data: pick('CBC','Platelets') },
+                  ]},
+                  { title: '⚗️ Metabolic Trends', series: [
+                    { label:'Glucose (mg/dL)', color:'#dd6b20', data: pick('Metabolic','Glucose') },
+                    { label:'Creatinine',      color:'#38a169', data: pick('Metabolic','Creatinine') },
+                    { label:'ALT (U/L)',        color:'#d69e2e', data: pick('Metabolic','ALT') },
+                  ]},
+                  { title: '💛 Lipid Trends', series: [
+                    { label:'Total Cholesterol', color:'#c05621', data: pick('Lipid','Total Cholesterol') },
+                    { label:'LDL',               color:'#e53e3e', data: pick('Lipid','LDL') },
+                    { label:'HDL',               color:'#38a169', data: pick('Lipid','HDL') },
+                    { label:'Triglycerides',     color:'#805ad5', data: pick('Lipid','Triglycerides') },
+                  ]},
+                ];
                 return (
                   <>
                     <Text style={[styles.summaryTableTitle, {marginTop: 16}]}>🩸 Blood Work History</Text>
+
+                    {/* Charts */}
+                    {chartGroups.map(cg => (
+                      <TrendChart key={cg.title} title={cg.title} labels={bwDates} series={cg.series} height={200} />
+                    ))}
+
+                    {/* Scrollable table */}
                     <ScrollView horizontal showsHorizontalScrollIndicator>
                       <View>
-                        {/* Date header row */}
                         <View style={[styles.tableRow, styles.tableHeader]}>
                           <Text style={[styles.tableCell, styles.tableHeaderCell, {width:160}]}>Test</Text>
-                          {bwDates.map(d => (
+                          {bwFull.map(d => (
                             <Text key={d} style={[styles.tableCell, styles.tableHeaderCell, {width:90}]}>{d.slice(2)}</Text>
                           ))}
                         </View>
                         {sections.map(sec => [
-                          /* Section heading row */
                           <View key={sec.label} style={[styles.tableRow, {backgroundColor:'#eef2ff'}]}>
                             <Text style={[styles.tableCell, {width:160, fontWeight:'700', color:'#1f3c88'}]}>{sec.label}</Text>
-                            {bwDates.map(d => <Text key={d} style={[styles.tableCell,{width:90}]} />)}
+                            {bwFull.map(d => <Text key={d} style={[styles.tableCell,{width:90}]} />)}
                           </View>,
                           ...sec.tests.map(test => (
                             <View key={test} style={styles.tableRow}>
@@ -750,6 +823,59 @@ export default function App() {
                             </View>
                           )),
                         ])}
+                      </View>
+                    </ScrollView>
+                  </>
+                );
+              })()}
+
+              {/* Urine test history + chart */}
+              {summary.urine_history && summary.urine_history.length > 0 && (() => {
+                const urDates  = summary.urine_history.map(u => u.date.slice(2));
+                const pickUr   = (sec, key) => summary.urine_history.map(u => u[sec]?.[key] ?? null);
+                const chemTests = ['Protein','Glucose','Ketones','Blood','Leukocytes','Nitrite','Bilirubin'];
+                const toNum  = v => (v === 'Negative' || v === 'Normal') ? 0 : (v === 'Positive' ? 1 : (typeof v === 'number' ? v : null));
+                return (
+                  <>
+                    <Text style={[styles.summaryTableTitle, {marginTop: 16}]}>🧪 Urine Test History</Text>
+
+                    {/* Physical metrics chart */}
+                    <TrendChart
+                      title="Physical — pH & Specific Gravity"
+                      labels={urDates}
+                      series={[
+                        { label: 'pH',              color: '#3182ce', data: pickUr('Physical','pH') },
+                        { label: 'Specific Gravity (×1000)', color: '#38a169',
+                          data: summary.urine_history.map(u => u.Physical?.['Specific Gravity'] != null ? Math.round(u.Physical['Specific Gravity'] * 1000) : null) },
+                      ]}
+                      height={190}
+                    />
+
+                    {/* Chemical status grid */}
+                    <Text style={[styles.summaryTableTitle, { marginTop: 8, fontSize: 12 }]}>Chemical Tests (🟢 Neg · 🔴 Pos)</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator>
+                      <View>
+                        <View style={[styles.tableRow, styles.tableHeader]}>
+                          <Text style={[styles.tableCell, styles.tableHeaderCell, {width:110}]}>Test</Text>
+                          {summary.urine_history.map(u => (
+                            <Text key={u.date} style={[styles.tableCell, styles.tableHeaderCell, {width:80}]}>{u.date.slice(2)}</Text>
+                          ))}
+                        </View>
+                        {chemTests.map(test => (
+                          <View key={test} style={styles.tableRow}>
+                            <Text style={[styles.tableCell, {width:110, color:'#4a5568'}]}>{test}</Text>
+                            {summary.urine_history.map(u => {
+                              const val = u.Chemical?.[test];
+                              const isPos = val && val !== 'Negative' && val !== 'Normal';
+                              return (
+                                <Text key={u.date} style={[styles.tableCell, {width:80, textAlign:'center',
+                                  color: isPos ? '#c0392b' : '#27ae60', fontWeight: isPos ? '700' : '400'}]}>
+                                  {isPos ? '🔴' : '🟢'}
+                                </Text>
+                              );
+                            })}
+                          </View>
+                        ))}
                       </View>
                     </ScrollView>
                   </>

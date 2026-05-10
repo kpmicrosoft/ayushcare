@@ -160,7 +160,7 @@ def _build_and_save_summary(user_id):
     if not os.path.exists(vdir):
         return {}
 
-    all_visits, blood_history = [], []
+    all_visits, blood_history, urine_history = [], [], []
 
     for vid in sorted(os.listdir(vdir)):
         folder = os.path.join(vdir, vid)
@@ -194,15 +194,28 @@ def _build_and_save_summary(user_id):
                     entry[section] = {k: v['value'] for k, v in bw[section].items()}
             blood_history.append(entry)
 
+        # Extract urine test values if present
+        ur_path = os.path.join(folder, 'urine_test.json')
+        if os.path.exists(ur_path):
+            with open(ur_path) as f:
+                ur = json.load(f)
+            ue = {'date': vm.get('date', ''), 'visit_id': vid}
+            for section in ('Physical', 'Chemical'):
+                if section in ur:
+                    ue[section] = dict(ur[section])
+            urine_history.append(ue)
+
     # Sort newest first
     all_visits.sort(key=lambda v: v['date'], reverse=True)
     blood_history.sort(key=lambda v: v['date'])
+    urine_history.sort(key=lambda v: v['date'])
 
     summary = {
         'generated_at':  datetime.now().isoformat(),
         'total_visits':  len(all_visits),
         'visits':        all_visits,
         'blood_work_history': blood_history,
+        'urine_history':      urine_history,
     }
     with open(os.path.join(vdir, SUMMARY_FILE), 'w') as f:
         json.dump(summary, f, indent=2)
