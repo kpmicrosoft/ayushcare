@@ -520,8 +520,8 @@ export default function App() {
                   <>
                     <Text style={styles.sectionSubtitle}>Social Handles / సామాజిక హ్యాండిల్స్</Text>
                     {filled.map(([h, v]) => (
-                      <View key={h} style={styles.infoRow}>
-                        <HandleBadge handleKey={h} />
+                      <View key={h} style={[styles.infoRow, { alignItems: 'center' }]}>
+                        <HandleBadge handleKey={h} style={{ width: 150 }} />
                         <Text style={styles.infoValue}>{v}</Text>
                       </View>
                     ))}
@@ -753,6 +753,7 @@ const styles = StyleSheet.create({
   },
   infoRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 8,
     borderBottomColor: '#e8edf5',
     borderBottomWidth: 1,
