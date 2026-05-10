@@ -61,10 +61,14 @@ def _create_user(phone):
     user = {
         'id': _generate_account_id(registry),
         'phone': phone,
-        'name': '',
+        'firstName': '', 'middleName': '', 'lastName': '',
         'handles': {
             'gmail': '', 'yahoo': '', 'twitter': '',
             'instagram': '', 'facebook': '', 'whatsapp': ''
+        },
+        'address': {
+            'line1': '', 'line2': '', 'city': '',
+            'district': '', 'state': '', 'pincode': '', 'country': 'India'
         },
         'registered': False,
         'created_at': datetime.utcnow().isoformat(),
@@ -182,7 +186,9 @@ def register():
     registry = _load_registry()
     for u in registry['users']:
         if u['id'] == user['id']:
-            u['name'] = data.get('name', '')
+            u['firstName']  = data.get('firstName', '')
+            u['middleName'] = data.get('middleName', '')
+            u['lastName']   = data.get('lastName', '')
             u['handles'] = {
                 'gmail':     data.get('gmail', ''),
                 'yahoo':     data.get('yahoo', ''),
@@ -202,7 +208,6 @@ def me():
     if err:
         return err, code
     if request.method == 'GET':
-        # Merge registry entry with profile.json
         profile = _load_profile(user['id'])
         return jsonify({**user, 'email': profile.get('email', ''), 'dob': profile.get('dob', '')}), 200
     # PUT — update editable fields only (phone + id are immutable)
@@ -210,10 +215,21 @@ def me():
     registry = _load_registry()
     for u in registry['users']:
         if u['id'] == user['id']:
-            if 'name' in data:
-                u['name'] = data['name']
+            for field in ('firstName', 'middleName', 'lastName'):
+                if field in data:
+                    u[field] = data[field]
             if 'handles' in data:
-                u['handles'].update(data['handles'])
+                u.setdefault('handles', {}).update(data['handles'])
+            if 'address' in data:
+                u['address'] = {
+                    'line1':    data['address'].get('line1', ''),
+                    'line2':    data['address'].get('line2', ''),
+                    'city':     data['address'].get('city', ''),
+                    'district': data['address'].get('district', ''),
+                    'state':    data['address'].get('state', ''),
+                    'pincode':  data['address'].get('pincode', ''),
+                    'country':  data['address'].get('country', 'India'),
+                }
             break
     _save_registry(registry)
     _save_profile(user['id'], {
