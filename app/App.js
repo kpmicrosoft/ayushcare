@@ -7,40 +7,37 @@ import {
   INDIA_STATES, US_STATES, INDIA_CITIES,
   LOOKUP_APIS, HANDLE_META, RECORD_TYPES,
 } from './constants';
+import {
+  Chart as ChartJS,
+  CategoryScale, LinearScale,
+  PointElement, LineElement,
+  Title, Tooltip, Legend, Filler,
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
 const API_BASE = config.apiBaseUrl;
 
-// ── Chart.js (web only) ────────────────────────────────────────────────────────
-let LineChart = null;
-if (Platform.OS === 'web') {
-  const ChartJS = require('chart.js');
-  ChartJS.Chart.register(
-    ChartJS.CategoryScale, ChartJS.LinearScale,
-    ChartJS.PointElement, ChartJS.LineElement,
-    ChartJS.Title, ChartJS.Tooltip, ChartJS.Legend, ChartJS.Filler,
-  );
-  LineChart = require('react-chartjs-2').Line;
-}
-
 // Render a single line chart — each series is { label, color, data[] }
 const TrendChart = ({ title, labels, series, height = 180 }) => {
-  if (!LineChart || !labels || labels.length < 2) return null;
+  if (!labels || labels.length < 2) return null;
   const data = {
     labels,
     datasets: series.map(s => ({
-      label:       s.label,
-      data:        s.data,
-      borderColor: s.color,
+      label:           s.label,
+      data:            s.data,
+      borderColor:     s.color,
       backgroundColor: s.color + '22',
-      borderWidth: 2,
-      pointRadius: 3,
-      tension:     0.3,
-      fill:        false,
-      spanGaps:    true,
+      borderWidth:     2,
+      pointRadius:     3,
+      tension:         0.3,
+      fill:            false,
+      spanGaps:        true,
     })),
   };
   const options = {
-    responsive: true,
+    responsive:          true,
     maintainAspectRatio: false,
     plugins: {
       legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
@@ -53,7 +50,7 @@ const TrendChart = ({ title, labels, series, height = 180 }) => {
   };
   return (
     <View style={{ height, marginBottom: 16 }}>
-      <LineChart data={data} options={options} />
+      <Line data={data} options={options} />
     </View>
   );
 };
