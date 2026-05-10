@@ -133,7 +133,7 @@ def create_session(phone):
 
 def get_phone_from_token(token):
     if token == 'demo-token':
-        return '+7327184414'
+        return '7327184414'
     entry = session_store.get(token)
     return entry['phone'] if entry else None
 

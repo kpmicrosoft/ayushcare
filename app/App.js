@@ -37,8 +37,9 @@ export default function App() {
   };
 
   const handleDemoLogin = () => {
-    setPhone('+7327184414');
+    setPhone('7327184414');
     setToken('demo-token');
+    setAccountId('demo');
     setStep('profile');
     setMessage('Demo login successful!');
   };
