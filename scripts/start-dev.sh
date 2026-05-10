@@ -18,7 +18,7 @@ BACKEND_PID=$!
 
 # Start frontend in background
 echo "Starting Expo web frontend..."
-cd ~/git/ayushcare/app && npm run web &
+cd ~/git/ayushcare/app && npx expo start --web &
 FRONTEND_PID=$!
 
 echo "Backend PID: $BACKEND_PID"
