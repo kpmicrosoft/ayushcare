@@ -427,8 +427,8 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (step === 'profile' && token) fetchMe();
-    else if (step === 'records' && token) fetchRecords();
+    if (token && step === 'profile') fetchMe();
+    if (token && step === 'records') { fetchMe(); fetchRecords(); }
   }, [step, token]);
 
   const fetchMe = async () => {
@@ -580,6 +580,22 @@ export default function App() {
         </View>
       )}
 
+      {/* ── Persistent nav bar (post-login) ── */}
+      {['profile', 'records'].includes(step) && (
+        <View style={styles.navBar}>
+          <TouchableOpacity
+            style={[styles.navItem, step === 'profile' && styles.navItemActive]}
+            onPress={() => { setEditMode(false); setStep('profile'); }}>
+            <Text style={[styles.navText, step === 'profile' && styles.navTextActive]}>👤 Profile</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.navItem, step === 'records' && styles.navItemActive]}
+            onPress={() => { setAddingVisit(false); setStep('records'); }}>
+            <Text style={[styles.navText, step === 'records' && styles.navTextActive]}>🏥 Medical Records</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* ── Profile ── */}
       {step === 'profile' && userInfo && (
         <View style={styles.form}>
@@ -656,8 +672,6 @@ export default function App() {
                 setEditDraft({ ...userInfo, address: { ...EMPTY_ADDRESS, ...(userInfo.address||{}) } });
                 setEditMode(true);
               }} />
-              <View style={styles.spacer} />
-              <Button title="View Medical Records / వైద్య రికార్డులు" onPress={() => setStep('records')} />
             </>
           ) : (
             <>
@@ -712,13 +726,10 @@ export default function App() {
 
           {/* Action bar */}
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-            <View style={{ flex: 1, minWidth: 110 }}>
-              <Button title="← Back" onPress={() => { setAddingVisit(false); setStep('profile'); }} />
-            </View>
-            <View style={{ flex: 1, minWidth: 110 }}>
+            <View style={{ flex: 1, minWidth: 120 }}>
               <Button title="+ Add Visit" onPress={() => setAddingVisit(v => !v)} />
             </View>
-            <View style={{ flex: 1, minWidth: 110 }}>
+            <View style={{ flex: 1, minWidth: 120 }}>
               <Button title={rescanning ? 'Scanning…' : '🔄 Rescan'} onPress={rescanSummary} disabled={rescanning} />
             </View>
           </View>
@@ -1317,8 +1328,32 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#b0c4de',
   },
-  tabBar: {
+  navBar: {
     flexDirection: 'row',
+    backgroundColor: '#1f3c88',
+    borderRadius: 12,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  navItem: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  navItemActive: {
+    backgroundColor: '#ffffff22',
+    borderBottomWidth: 3,
+    borderBottomColor: '#7eb8f7',
+  },
+  navText: {
+    color: '#a0b8e0',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  navTextActive: {
+    color: '#fff',
+  },
+  tabBar: {    flexDirection: 'row',
     gap: 8,
     marginBottom: 12,
   },
