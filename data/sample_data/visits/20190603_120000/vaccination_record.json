@@ -1,0 +1,16 @@
+{
+  "report_type": "Vaccination Record",
+  "patient": {
+    "name": "Kishore Pendyala",
+    "phone": "7327184414",
+    "id": "202605100000000002",
+    "address": "12-3 Main St, Hyderabad, Rangareddy, Telangana, 500001, India"
+  },
+  "date": "2019-06-03",
+  "vaccine": "Influenza Trivalent",
+  "dose": "Single Dose",
+  "manufacturer": "Sanofi Pasteur",
+  "lot_number": "LOT11755",
+  "site": "Left deltoid",
+  "next_due": null
+}

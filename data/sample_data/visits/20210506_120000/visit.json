@@ -1,0 +1,10 @@
+{
+  "date": "2021-05-06",
+  "type": "vaccination",
+  "doctor": "Dr. Meera Pillai",
+  "notes": "COVID-19 Vaccine Dose 2 (Covishield) \u2014 mild fever next day",
+  "created_at": "2021-05-06T12:00:00',",
+  "files": [
+    "vaccination_record.json"
+  ]
+}

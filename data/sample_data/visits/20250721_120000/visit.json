@@ -1,0 +1,12 @@
+{
+  "date": "2025-07-21",
+  "type": "blood_work",
+  "doctor": "Dr. Ramesh Babu",
+  "notes": "6-month follow-up \u2014 lipids stable, liver enzymes normal",
+  "created_at": "2025-07-21T12:00:00',",
+  "files": [
+    "blood_work.json",
+    "urine_test.json",
+    "lab_report.pdf"
+  ]
+}

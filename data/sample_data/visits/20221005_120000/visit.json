@@ -1,0 +1,10 @@
+{
+  "date": "2022-10-05",
+  "type": "prescription",
+  "doctor": "Dr. Ramesh Babu",
+  "notes": "Atorvastatin 10mg prescribed \u2014 LDL slightly elevated",
+  "created_at": "2022-10-05T12:00:00',",
+  "files": [
+    "prescription.json"
+  ]
+}

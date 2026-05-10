@@ -1,0 +1,10 @@
+{
+  "date": "2019-06-03",
+  "type": "vaccination",
+  "doctor": "Dr. Meera Pillai",
+  "notes": "Annual flu vaccine + Hepatitis B booster",
+  "created_at": "2019-06-03T12:00:00',",
+  "files": [
+    "vaccination_record.json"
+  ]
+}

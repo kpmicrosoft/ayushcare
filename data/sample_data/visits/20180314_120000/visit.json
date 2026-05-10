@@ -1,0 +1,12 @@
+{
+  "date": "2018-03-14",
+  "type": "ct_scan",
+  "doctor": "Dr. Anand Krishnan",
+  "notes": "EMERGENCY: Severe abdominal pain \u2014 CT confirmed appendicitis. Appendectomy scheduled.",
+  "created_at": "2018-03-14T12:00:00',",
+  "files": [
+    "ct_scan_report.pdf",
+    "ct_scan_image.png",
+    "consultation_notes.pdf"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "report_type": "Prescription",
+  "patient": {
+    "name": "Kishore Pendyala",
+    "phone": "7327184414",
+    "id": "202605100000000002",
+    "address": "12-3 Main St, Hyderabad, Rangareddy, Telangana, 500001, India"
+  },
+  "date": "2019-11-11",
+  "medications": [
+    {
+      "name": "Vitamin",
+      "dose": "Vitamin D3 60000IU",
+      "frequency": "1-0-1",
+      "duration": "30 days"
+    },
+    {
+      "name": "Methylcobalamin",
+      "dose": "Methylcobalamin 1500mcg",
+      "frequency": "1-0-1",
+      "duration": "30 days"
+    }
+  ],
+  "instructions": "Take after food. Avoid alcohol."
+}

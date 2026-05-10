@@ -1,0 +1,12 @@
+{
+  "date": "2026-01-20",
+  "type": "blood_work",
+  "doctor": "Dr. Ramesh Babu",
+  "notes": "Most recent biannual \u2014 HbA1c added, glucose controlled",
+  "created_at": "2026-01-20T12:00:00',",
+  "files": [
+    "blood_work.json",
+    "urine_test.json",
+    "lab_report.pdf"
+  ]
+}

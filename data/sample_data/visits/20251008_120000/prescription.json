@@ -1,0 +1,25 @@
+{
+  "report_type": "Prescription",
+  "patient": {
+    "name": "Kishore Pendyala",
+    "phone": "7327184414",
+    "id": "202605100000000002",
+    "address": "12-3 Main St, Hyderabad, Rangareddy, Telangana, 500001, India"
+  },
+  "date": "2025-10-08",
+  "medications": [
+    {
+      "name": "Metformin",
+      "dose": "Metformin 500mg",
+      "frequency": "1-0-1",
+      "duration": "30 days"
+    },
+    {
+      "name": "Chromium",
+      "dose": "Chromium Picolinate 200mcg",
+      "frequency": "1-0-1",
+      "duration": "30 days"
+    }
+  ],
+  "instructions": "Take after food. Avoid alcohol."
+}

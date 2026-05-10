@@ -1,0 +1,11 @@
+{
+  "date": "2023-07-24",
+  "type": "blood_work",
+  "doctor": "Dr. Ramesh Babu",
+  "notes": "6-month follow-up, LDL improved",
+  "created_at": "2023-07-24T12:00:00',",
+  "files": [
+    "blood_work.json",
+    "lab_report.pdf"
+  ]
+}

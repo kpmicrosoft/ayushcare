@@ -1,0 +1,12 @@
+{
+  "date": "2022-03-22",
+  "type": "ecg",
+  "doctor": "Dr. Suresh Nair",
+  "notes": "Cardiology screening \u2014 family history of heart disease. ECG normal, advised annual ECG.",
+  "created_at": "2022-03-22T12:00:00',",
+  "files": [
+    "ecg_report.pdf",
+    "ecg_trace.png",
+    "consultation_notes.pdf"
+  ]
+}

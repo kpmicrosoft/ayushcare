@@ -1,0 +1,26 @@
+{
+  "report_type": "Urinalysis",
+  "patient": {
+    "name": "Kishore Pendyala",
+    "phone": "7327184414",
+    "id": "202605100000000002",
+    "address": "12-3 Main St, Hyderabad, Rangareddy, Telangana, 500001, India"
+  },
+  "date": "2022-01-17",
+  "lab": "SRL Diagnostics",
+  "Physical": {
+    "Color": "Amber",
+    "Clarity": "Clear",
+    "Specific Gravity": 1.015,
+    "pH": 6.8
+  },
+  "Chemical": {
+    "Protein": "Negative",
+    "Glucose": "Negative",
+    "Ketones": "Negative",
+    "Blood": "Negative",
+    "Leukocytes": "Negative",
+    "Nitrite": "Negative",
+    "Bilirubin": "Negative"
+  }
+}

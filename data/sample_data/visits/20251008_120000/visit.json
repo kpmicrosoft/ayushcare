@@ -1,0 +1,11 @@
+{
+  "date": "2025-10-08",
+  "type": "prescription",
+  "doctor": "Dr. Ramesh Babu",
+  "notes": "Metformin 500mg started \u2014 pre-diabetic fasting glucose trend",
+  "created_at": "2025-10-08T12:00:00',",
+  "files": [
+    "prescription.json",
+    "consultation_notes.pdf"
+  ]
+}

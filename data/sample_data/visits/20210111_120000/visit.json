@@ -1,0 +1,12 @@
+{
+  "date": "2021-01-11",
+  "type": "blood_work",
+  "doctor": "Dr. Ramesh Babu",
+  "notes": "Routine biannual, lung function back to normal",
+  "created_at": "2021-01-11T12:00:00',",
+  "files": [
+    "blood_work.json",
+    "urine_test.json",
+    "lab_report.pdf"
+  ]
+}

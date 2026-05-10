@@ -1,0 +1,10 @@
+{
+  "date": "2016-09-05",
+  "type": "consultation",
+  "doctor": "Dr. Ramesh Babu",
+  "notes": "General health checkup, mild vitamin D deficiency noted",
+  "created_at": "2016-09-05T12:00:00',",
+  "files": [
+    "consultation_notes.pdf"
+  ]
+}

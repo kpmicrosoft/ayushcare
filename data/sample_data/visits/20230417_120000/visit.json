@@ -1,0 +1,12 @@
+{
+  "date": "2023-04-17",
+  "type": "mri",
+  "doctor": "Dr. Priya Sharma",
+  "notes": "Lower back pain for 3 months \u2014 MRI shows L4-L5 disc bulge, physio recommended",
+  "created_at": "2023-04-17T12:00:00',",
+  "files": [
+    "mri_report.pdf",
+    "mri_image.png",
+    "consultation_notes.pdf"
+  ]
+}

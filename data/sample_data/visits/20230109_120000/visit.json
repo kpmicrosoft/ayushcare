@@ -1,0 +1,12 @@
+{
+  "date": "2023-01-09",
+  "type": "blood_work",
+  "doctor": "Dr. Ramesh Babu",
+  "notes": "Routine biannual + lipid follow-up (on Atorvastatin)",
+  "created_at": "2023-01-09T12:00:00',",
+  "files": [
+    "blood_work.json",
+    "urine_test.json",
+    "lab_report.pdf"
+  ]
+}

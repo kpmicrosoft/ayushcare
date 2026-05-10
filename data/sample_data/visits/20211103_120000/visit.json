@@ -1,0 +1,10 @@
+{
+  "date": "2021-11-03",
+  "type": "consultation",
+  "doctor": "Dr. Ramesh Babu",
+  "notes": "Annual health review \u2014 all good",
+  "created_at": "2021-11-03T12:00:00',",
+  "files": [
+    "consultation_notes.pdf"
+  ]
+}

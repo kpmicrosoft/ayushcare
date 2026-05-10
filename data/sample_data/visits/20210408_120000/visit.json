@@ -1,0 +1,10 @@
+{
+  "date": "2021-04-08",
+  "type": "vaccination",
+  "doctor": "Dr. Meera Pillai",
+  "notes": "COVID-19 Vaccine Dose 1 (Covishield)",
+  "created_at": "2021-04-08T12:00:00',",
+  "files": [
+    "vaccination_record.json"
+  ]
+}

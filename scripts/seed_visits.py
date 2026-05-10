@@ -17,7 +17,9 @@ if not user:
     sys.exit('Demo user 7327184414 not found in users.json — log in once first.')
 USER_ID   = user['id']
 VISITS_DIR = os.path.join(BASE, 'data', 'users', USER_ID, 'visits')
+SAMPLE_DIR = os.path.join(BASE, 'data', 'sample_data', 'visits')
 os.makedirs(VISITS_DIR, exist_ok=True)
+os.makedirs(SAMPLE_DIR, exist_ok=True)
 
 # Build patient header from registry
 first  = user.get('firstName', '')
@@ -313,66 +315,68 @@ SCAN_COLOURS = {
 for v in visits:
     visit_date = date.fromisoformat(v['d'])
     visit_id   = v['d'].replace('-','') + '_120000'   # deterministic ID
-    vdir       = os.path.join(VISITS_DIR, visit_id)
-    if os.path.exists(vdir):
-        print(f'  skip (exists): {visit_id}')
-        continue
-    os.makedirs(vdir)
 
-    meta = {
-        'date': v['d'], 'type': v['type'],
-        'doctor': v['doctor'], 'notes': v['notes'],
-        'created_at': f"{v['d']}T12:00:00',",
-        'files': v['files'],
-    }
-    with open(os.path.join(vdir, 'visit.json'), 'w') as f:
-        json.dump(meta, f, indent=2)
+    for target_dir, label in [(VISITS_DIR, 'user'), (SAMPLE_DIR, 'sample')]:
+        vdir = os.path.join(target_dir, visit_id)
+        if os.path.exists(vdir) and label == 'user':
+            print(f'  skip (exists): {visit_id}')
+            continue
+        os.makedirs(vdir, exist_ok=True)
 
-    for fn in v['files']:
-        path = os.path.join(vdir, fn)
-        if fn == 'blood_work.json':
-            with open(path,'w') as f: json.dump(blood_work(visit_date, v['notes']), f, indent=2)
-        elif fn == 'urine_test.json':
-            with open(path,'w') as f: json.dump(urine_test(visit_date), f, indent=2)
-        elif fn == 'prescription.json':
-            with open(path,'w') as f: json.dump(prescription_json(visit_date, v['notes']), f, indent=2)
-        elif fn == 'vaccination_record.json':
-            with open(path,'w') as f: json.dump(vaccination_json(visit_date, v['notes']), f, indent=2)
-        elif fn == 'covid_test_report.json':
-            with open(path,'w') as f: json.dump(covid_test_json(visit_date), f, indent=2)
-        elif fn == 'consultation_notes.pdf':
-            with open(path,'wb') as f: f.write(consultation_pdf(visit_date, v['doctor'], v['notes']))
-        elif fn == 'lab_report.pdf':
-            with open(path,'wb') as f: f.write(lab_report_pdf(visit_date, v['doctor']))
-        elif fn in ('pulmonology_referral.pdf',):
-            with open(path,'wb') as f: f.write(make_pdf(f'Referral — {visit_date}',
-                ['Referred to: Pulmonology Dept', 'Reason: Post-COVID persistent breathlessness',
-                 'Urgency: Routine', '', 'Please review and advise management.']))
-        elif fn == 'ct_scan_report.pdf':
-            with open(path,'wb') as f: f.write(imaging_pdf(visit_date,'CT Abdomen',
-                'Findings: Distended appendix (10mm diameter) with periappendiceal fat stranding. '
-                'No free air. Impression: Acute appendicitis. Surgical consultation advised.'))
-        elif fn == 'mri_report.pdf':
-            with open(path,'wb') as f: f.write(imaging_pdf(visit_date,'MRI Lumbar Spine',
-                'L4-L5: Posterior disc bulge with mild thecal sac indentation. '
-                'No cord compression. Impression: L4-L5 disc bulge. Physiotherapy recommended.'))
-        elif fn == 'xray_report.pdf':
-            with open(path,'wb') as f: f.write(imaging_pdf(visit_date,'Chest X-Ray PA View',
-                'Lungs: Clear, no consolidation or effusion. Heart size normal. '
-                'Mediastinum: Normal. Impression: Normal chest X-ray.'))
-        elif fn == 'ecg_report.pdf':
-            with open(path,'wb') as f: f.write(imaging_pdf(visit_date,'12-Lead ECG',
-                'Rate: 72 bpm. Rhythm: Regular sinus. PR interval: 160ms. '
-                'QRS: 80ms. QT: 380ms. Axis: Normal. Impression: Normal ECG.'))
-        elif fn == 'ultrasound_report.pdf':
-            with open(path,'wb') as f: f.write(imaging_pdf(visit_date,'Abdominal Ultrasound',
-                'Liver: Mildly increased echogenicity consistent with Grade 1 fatty liver. '
-                'Gallbladder, spleen, kidneys: Normal. Impression: Mild fatty liver disease.'))
-        elif fn.endswith('.png'):
-            colour = SCAN_COLOURS.get(v['type'], (100,100,200))
-            with open(path,'wb') as f: f.write(png_1x1(*colour))
-        # any other file: skip
+        meta = {
+            'date': v['d'], 'type': v['type'],
+            'doctor': v['doctor'], 'notes': v['notes'],
+            'created_at': f"{v['d']}T12:00:00',",
+            'files': v['files'],
+        }
+        with open(os.path.join(vdir, 'visit.json'), 'w') as f:
+            json.dump(meta, f, indent=2)
 
-    print(f'  created: {visit_id}  [{v["type"]}]  {len(v["files"])} files')
+        for fn in v['files']:
+            path = os.path.join(vdir, fn)
+            if fn == 'blood_work.json':
+                with open(path,'w') as f: json.dump(blood_work(visit_date, v['notes']), f, indent=2)
+            elif fn == 'urine_test.json':
+                with open(path,'w') as f: json.dump(urine_test(visit_date), f, indent=2)
+            elif fn == 'prescription.json':
+                with open(path,'w') as f: json.dump(prescription_json(visit_date, v['notes']), f, indent=2)
+            elif fn == 'vaccination_record.json':
+                with open(path,'w') as f: json.dump(vaccination_json(visit_date, v['notes']), f, indent=2)
+            elif fn == 'covid_test_report.json':
+                with open(path,'w') as f: json.dump(covid_test_json(visit_date), f, indent=2)
+            elif fn == 'consultation_notes.pdf':
+                with open(path,'wb') as f: f.write(consultation_pdf(visit_date, v['doctor'], v['notes']))
+            elif fn == 'lab_report.pdf':
+                with open(path,'wb') as f: f.write(lab_report_pdf(visit_date, v['doctor']))
+            elif fn in ('pulmonology_referral.pdf',):
+                with open(path,'wb') as f: f.write(make_pdf(f'Referral — {visit_date}',
+                    [f'Patient: {PATIENT_NAME}', f'Phone: {PATIENT_PHONE}',
+                     'Referred to: Pulmonology Dept', 'Reason: Post-COVID persistent breathlessness',
+                     'Urgency: Routine', '', 'Please review and advise management.']))
+            elif fn == 'ct_scan_report.pdf':
+                with open(path,'wb') as f: f.write(imaging_pdf(visit_date,'CT Abdomen',
+                    'Findings: Distended appendix (10mm diameter) with periappendiceal fat stranding. '
+                    'No free air. Impression: Acute appendicitis. Surgical consultation advised.'))
+            elif fn == 'mri_report.pdf':
+                with open(path,'wb') as f: f.write(imaging_pdf(visit_date,'MRI Lumbar Spine',
+                    'L4-L5: Posterior disc bulge with mild thecal sac indentation. '
+                    'No cord compression. Impression: L4-L5 disc bulge. Physiotherapy recommended.'))
+            elif fn == 'xray_report.pdf':
+                with open(path,'wb') as f: f.write(imaging_pdf(visit_date,'Chest X-Ray PA View',
+                    'Lungs: Clear, no consolidation or effusion. Heart size normal. '
+                    'Mediastinum: Normal. Impression: Normal chest X-ray.'))
+            elif fn == 'ecg_report.pdf':
+                with open(path,'wb') as f: f.write(imaging_pdf(visit_date,'12-Lead ECG',
+                    'Rate: 72 bpm. Rhythm: Regular sinus. PR interval: 160ms. '
+                    'QRS: 80ms. QT: 380ms. Axis: Normal. Impression: Normal ECG.'))
+            elif fn == 'ultrasound_report.pdf':
+                with open(path,'wb') as f: f.write(imaging_pdf(visit_date,'Abdominal Ultrasound',
+                    'Liver: Mildly increased echogenicity consistent with Grade 1 fatty liver. '
+                    'Gallbladder, spleen, kidneys: Normal. Impression: Mild fatty liver disease.'))
+            elif fn.endswith('.png'):
+                colour = SCAN_COLOURS.get(v['type'], (100,100,200))
+                with open(path,'wb') as f: f.write(png_1x1(*colour))
+
+    print(f'  created: {visit_id}  [{v["type"]}]  {len(v["files"])} files  → user + sample_data')
 
 print(f'\nDone. {len(visits)} visits seeded.')

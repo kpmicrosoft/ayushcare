@@ -1,0 +1,103 @@
+{
+  "report_type": "Complete Blood Count + Metabolic Panel",
+  "patient": {
+    "name": "Kishore Pendyala",
+    "phone": "7327184414",
+    "id": "202605100000000002",
+    "address": "12-3 Main St, Hyderabad, Rangareddy, Telangana, 500001, India"
+  },
+  "date": "2020-07-06",
+  "lab": "SRL Diagnostics",
+  "notes": "Post-COVID panel + antibody test. Antibodies detected.",
+  "CBC": {
+    "WBC": {
+      "value": 6.29,
+      "unit": "\u00d710\u00b3/\u00b5L",
+      "ref": "4.5\u201311.0"
+    },
+    "RBC": {
+      "value": 4.98,
+      "unit": "\u00d710\u2076/\u00b5L",
+      "ref": "4.5\u20135.9"
+    },
+    "Hemoglobin": {
+      "value": 14.88,
+      "unit": "g/dL",
+      "ref": "13.5\u201317.5"
+    },
+    "Hematocrit": {
+      "value": 43.87,
+      "unit": "%",
+      "ref": "41\u201353"
+    },
+    "MCV": {
+      "value": 87.75,
+      "unit": "fL",
+      "ref": "80\u2013100"
+    },
+    "Platelets": {
+      "value": 244.4,
+      "unit": "\u00d710\u00b3/\u00b5L",
+      "ref": "150\u2013400"
+    }
+  },
+  "Metabolic": {
+    "Glucose": {
+      "value": 95.28,
+      "unit": "mg/dL",
+      "ref": "70\u2013100"
+    },
+    "BUN": {
+      "value": 14.89,
+      "unit": "mg/dL",
+      "ref": "7\u201320"
+    },
+    "Creatinine": {
+      "value": 1.02,
+      "unit": "mg/dL",
+      "ref": "0.7\u20131.2"
+    },
+    "Sodium": {
+      "value": 141.08,
+      "unit": "mEq/L",
+      "ref": "136\u2013145"
+    },
+    "Potassium": {
+      "value": 3.79,
+      "unit": "mEq/L",
+      "ref": "3.5\u20135.1"
+    },
+    "ALT": {
+      "value": 22.58,
+      "unit": "U/L",
+      "ref": "7\u201356"
+    },
+    "AST": {
+      "value": 28.43,
+      "unit": "U/L",
+      "ref": "10\u201340"
+    }
+  },
+  "Lipid": {
+    "Total Cholesterol": {
+      "value": 186.18,
+      "unit": "mg/dL",
+      "ref": "<200"
+    },
+    "HDL": {
+      "value": 49.79,
+      "unit": "mg/dL",
+      "ref": ">40"
+    },
+    "LDL": {
+      "value": 117.7,
+      "unit": "mg/dL",
+      "ref": "<130"
+    },
+    "Triglycerides": {
+      "value": 141.72,
+      "unit": "mg/dL",
+      "ref": "<150"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "date": "2025-04-01",
+  "type": "vaccination",
+  "doctor": "Dr. Meera Pillai",
+  "notes": "Annual flu vaccine + Tdap booster",
+  "created_at": "2025-04-01T12:00:00',",
+  "files": [
+    "vaccination_record.json"
+  ]
+}
