@@ -71,6 +71,6 @@ When restarting, review this README and follow the first incomplete item under "
 - `cd app && npm install`
 - `cd app && npm run web`
 - `cd api_py && pip install -r requirements.txt`
-- `cd api_py && python3 app.py` (runs on port 7071)
+- `cd api_py && python3 app.py` (runs on port 5000)
 - `cd app && npm run build` for frontend production builds
 - API URL switching is automatic: `app/config.js` uses `localhost:7071` locally and the Azure backend URL in production

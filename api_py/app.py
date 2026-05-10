@@ -142,4 +142,4 @@ def root():
     return redirect('/swagger/', code=302)
 
 if __name__ == '__main__':
-    app.run(debug=True, port=7071)
+    app.run(debug=True, port=5000)
