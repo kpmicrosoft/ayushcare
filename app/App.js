@@ -359,7 +359,10 @@ export default function App() {
   const [visitDraft, setVisitDraft] = useState({ date: '', type: 'consultation', doctor: '', notes: '' });
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef(null);
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(null);
+  const fileInputRef   = useRef(null);
+  const importInputRef = useRef(null);
 
   const handleSendOtp = async () => {
     setMessage('Sending OTP...');
@@ -487,6 +490,44 @@ export default function App() {
       }
     } catch (e) { console.error(e); }
     setRescanning(false);
+  };
+
+  const importFolder = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setImporting(true);
+    setImportProgress(`Preparing ${files.length} files…`);
+    try {
+      const form = new FormData();
+      for (const file of files) {
+        // webkitRelativePath gives e.g. "visits/20160112_120000/blood_work.json"
+        const relPath = file.webkitRelativePath || file.name;
+        form.append(relPath, file);
+      }
+      setImportProgress(`Uploading ${files.length} files…`);
+      const res = await fetch(`${API_BASE}/records/import`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: form,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setImportProgress(
+          `✅ Imported ${data.imported_visits} visits (${data.imported_files} files)` +
+          (data.skipped ? ` · ${data.skipped} skipped` : '')
+        );
+        await fetchRecords();
+        const sumRes = await fetch(`${API_BASE}/records/summary`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (sumRes.ok) setSummary(await sumRes.json());
+      } else {
+        setImportProgress(`❌ ${data.error || 'Import failed'}`);
+      }
+    } catch (err) {
+      setImportProgress(`❌ ${err.message}`);
+    }
+    setImporting(false);
+    // Reset input so same folder can be re-imported
+    if (importInputRef.current) importInputRef.current.value = '';
   };
 
   const submitVisit = async () => {
@@ -730,9 +771,36 @@ export default function App() {
               <Button title="+ Add Visit" onPress={() => setAddingVisit(v => !v)} />
             </View>
             <View style={{ flex: 1, minWidth: 120 }}>
+              <Button title={importing ? 'Importing…' : '📁 Import Folder'}
+                onPress={() => importInputRef.current && importInputRef.current.click()}
+                disabled={importing} />
+            </View>
+            <View style={{ flex: 1, minWidth: 120 }}>
               <Button title={rescanning ? 'Scanning…' : '🔄 Rescan'} onPress={rescanSummary} disabled={rescanning} />
             </View>
           </View>
+
+          {/* Hidden folder picker */}
+          {Platform.OS === 'web' && (
+            <input
+              ref={importInputRef}
+              type="file"
+              webkitdirectory="true"
+              multiple
+              style={{ display: 'none' }}
+              onChange={importFolder}
+            />
+          )}
+
+          {/* Import progress */}
+          {importProgress && (
+            <View style={{ backgroundColor: '#eef2ff', borderRadius: 8, padding: 10, marginBottom: 10 }}>
+              <Text style={{ fontSize: 13, color: '#2b3a67' }}>{importProgress}</Text>
+              <TouchableOpacity onPress={() => setImportProgress(null)}>
+                <Text style={{ fontSize: 11, color: '#6b7a99', marginTop: 4 }}>Dismiss</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Summary view tabs */}
           <View style={styles.tabBar}>

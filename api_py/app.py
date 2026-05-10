@@ -402,6 +402,90 @@ def delete_record(visit_id):
     _build_and_save_summary(user['id'])          # keep summary in sync
     return jsonify({'message': 'Visit deleted'}), 200
 
+# ── Bulk import from folder upload ────────────────────────────────────────────
+VISIT_ID_RE = re.compile(r'^\d{8}_\d{6}$')
+
+@app.route('/api/records/import', methods=['POST'])
+def import_visits():
+    """
+    Accept multipart files where each field name is the relative path within
+    the visits folder, e.g. '20160112_120000/blood_work.json'.
+    Paths may be prefixed with any number of leading directory components
+    (e.g. 'visits/20160112_120000/blood_work.json') — those are stripped.
+    """
+    user, err, code = _authed_user(request)
+    if err:
+        return err, code
+
+    visits_root = _visits_dir(user['id'])
+    imported = {}   # visit_id -> list of saved filenames
+    skipped  = []
+
+    for field_name, file_storage in request.files.items():
+        # Normalise separators
+        rel = field_name.replace('\\', '/').strip('/')
+
+        # Strip leading components until we find a YYYYMMDD_HHMMSS segment
+        parts = rel.split('/')
+        visit_idx = next(
+            (i for i, p in enumerate(parts) if VISIT_ID_RE.match(p)), None
+        )
+        if visit_idx is None:
+            skipped.append(field_name)
+            continue
+
+        visit_id  = parts[visit_idx]
+        file_name = '/'.join(parts[visit_idx + 1:]) if visit_idx + 1 < len(parts) else ''
+        if not file_name:
+            skipped.append(field_name)
+            continue
+
+        # Sanitise filename (keep only the last component for security)
+        safe_name = secure_filename(os.path.basename(file_name))
+        if not safe_name:
+            skipped.append(field_name)
+            continue
+
+        ext = safe_name.rsplit('.', 1)[-1].lower() if '.' in safe_name else ''
+        if ext not in ALLOWED_EXTENSIONS:
+            skipped.append(field_name)
+            continue
+
+        dest_dir = os.path.join(visits_root, visit_id)
+        os.makedirs(dest_dir, exist_ok=True)
+        file_storage.save(os.path.join(dest_dir, safe_name))
+        imported.setdefault(visit_id, []).append(safe_name)
+
+    # Auto-create visit.json for any imported folder that's missing one
+    for visit_id, files in imported.items():
+        vj = os.path.join(visits_root, visit_id, 'visit.json')
+        if not os.path.exists(vj):
+            # Parse date from folder name YYYYMMDD_HHMMSS
+            try:
+                dt = datetime.strptime(visit_id, '%Y%m%d_%H%M%S')
+                date_str = dt.strftime('%Y-%m-%d')
+            except ValueError:
+                date_str = ''
+            meta = {
+                'date':       date_str,
+                'type':       'other',
+                'doctor':     '',
+                'notes':      'Imported from sample data',
+                'created_at': datetime.now().isoformat(),
+                'files':      files,
+            }
+            with open(vj, 'w') as f:
+                json.dump(meta, f, indent=2)
+
+    _build_and_save_summary(user['id'])
+
+    return jsonify({
+        'imported_visits': len(imported),
+        'imported_files':  sum(len(v) for v in imported.values()),
+        'skipped':         len(skipped),
+        'visit_ids':       sorted(imported.keys()),
+    }), 200
+
 @app.route('/api/records/<visit_id>/files/<filename>', methods=['GET'])
 def serve_record_file(visit_id, filename):
     # Accept token via Authorization header OR ?token= query param (for direct links)
