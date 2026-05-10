@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, redirect
+from flask import Flask, request, jsonify, redirect, send_file
 import random
 import re
 import time
@@ -6,7 +6,9 @@ import uuid
 import json
 import os
 import shutil
+import mimetypes
 from datetime import datetime
+from werkzeug.utils import secure_filename
 from flask_swagger_ui import get_swaggerui_blueprint
 from flask_cors import CORS
 
@@ -96,29 +98,58 @@ def _save_profile(user_id, data):
         json.dump(data, f, indent=2)
 
 # ── Visits ────────────────────────────────────────────────────────────────────
+ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'json', 'csv', 'txt', 'dcm', 'doc', 'docx'}
+
 def _visits_dir(user_id):
     return os.path.join(USERS_DIR, user_id, 'visits')
+
+def _visit_meta(user_id, visit_id):
+    path = os.path.join(_visits_dir(user_id), visit_id, 'visit.json')
+    if not os.path.exists(path):
+        return None
+    with open(path) as f:
+        meta = json.load(f)
+    vdir = os.path.join(_visits_dir(user_id), visit_id)
+    meta['id'] = visit_id
+    meta['files'] = [fn for fn in os.listdir(vdir) if fn != 'visit.json' and os.path.isfile(os.path.join(vdir, fn))]
+    return meta
 
 def _load_visits(user_id):
     vdir = _visits_dir(user_id)
     if not os.path.exists(vdir):
         return []
     visits = []
-    for folder in sorted(os.listdir(vdir)):
-        rpath = os.path.join(vdir, folder, 'record.json')
-        if os.path.exists(rpath):
-            with open(rpath) as f:
-                visits.append(json.load(f))
+    for vid in sorted(os.listdir(vdir), reverse=True):
+        if os.path.isdir(os.path.join(vdir, vid)):
+            meta = _visit_meta(user_id, vid)
+            if meta:
+                visits.append(meta)
     return visits
 
-def _save_visit(user_id, data):
-    ts = datetime.utcnow().strftime('%Y%m%dT%H%M%S')
-    visit_dir = os.path.join(_visits_dir(user_id), ts)
-    os.makedirs(visit_dir, exist_ok=True)
-    data.update({'id': ts, 'created_at': datetime.utcnow().isoformat()})
-    with open(os.path.join(visit_dir, 'record.json'), 'w') as f:
-        json.dump(data, f, indent=2)
-    return data
+def _save_visit(user_id, data, files=None):
+    visit_id = datetime.now().strftime('%Y%m%d_%H%M%S')
+    vdir = os.path.join(_visits_dir(user_id), visit_id)
+    os.makedirs(vdir, exist_ok=True)
+    meta = {
+        'date':       data.get('date', datetime.now().strftime('%Y-%m-%d')),
+        'type':       data.get('type', 'other'),
+        'doctor':     data.get('doctor', ''),
+        'notes':      data.get('notes', ''),
+        'created_at': datetime.now().isoformat(),
+    }
+    saved = []
+    for f in (files or []):
+        if f and f.filename:
+            ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
+            if ext in ALLOWED_EXTENSIONS:
+                fn = secure_filename(f.filename)
+                f.save(os.path.join(vdir, fn))
+                saved.append(fn)
+    meta['files'] = saved
+    with open(os.path.join(vdir, 'visit.json'), 'w') as fp:
+        json.dump(meta, fp, indent=2)
+    meta['id'] = visit_id
+    return meta
 
 # ── OTP & sessions (in-memory, ephemeral) ────────────────────────────────────
 otp_store     = {}
@@ -255,8 +286,41 @@ def records():
         return err, code
     if request.method == 'GET':
         return jsonify(_load_visits(user['id'])), 200
-    visit = _save_visit(user['id'], request.get_json())
-    return jsonify({'message': 'Record added', 'id': visit['id']}), 201
+    # POST — multipart (with files) or JSON (no files)
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        data  = request.form.to_dict()
+        files = request.files.getlist('files')
+    else:
+        data  = request.get_json() or {}
+        files = []
+    visit = _save_visit(user['id'], data, files)
+    return jsonify(visit), 201
+
+@app.route('/api/records/<visit_id>', methods=['DELETE'])
+def delete_record(visit_id):
+    user, err, code = _authed_user(request)
+    if err:
+        return err, code
+    vdir = os.path.join(_visits_dir(user['id']), secure_filename(visit_id))
+    if not os.path.exists(vdir):
+        return jsonify({'error': 'Visit not found'}), 404
+    shutil.rmtree(vdir)
+    return jsonify({'message': 'Visit deleted'}), 200
+
+@app.route('/api/records/<visit_id>/files/<filename>', methods=['GET'])
+def serve_record_file(visit_id, filename):
+    # Accept token via Authorization header OR ?token= query param (for direct links)
+    token = request.args.get('token') or (request.headers.get('Authorization', '').replace('Bearer ', '') or None)
+    phone = get_phone_from_token(token) if token else None
+    if not phone:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user = _get_or_create_user(phone)
+    filepath = os.path.join(_visits_dir(user['id']), secure_filename(visit_id), secure_filename(filename))
+    if not os.path.exists(filepath):
+        return jsonify({'error': 'File not found'}), 404
+    mime, _ = mimetypes.guess_type(filepath)
+    return send_file(filepath, mimetype=mime or 'application/octet-stream',
+                     as_attachment=False, download_name=filename)
 
 @app.route('/swagger.json')
 def swagger_json():

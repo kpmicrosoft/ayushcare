@@ -8,6 +8,21 @@ export const HANDLE_META = {
   facebook:  { label: 'Facebook',   color: '#1877F2', symbol: 'f'  },
   whatsapp:  { label: 'WhatsApp',   color: '#25D366', symbol: 'W'  },
 };
+
+// ─── Medical record types ─────────────────────────────────────────────────────
+export const RECORD_TYPES = [
+  { key: 'blood_work',    label: 'Blood Work',   te: 'రక్త పరీక్ష',       color: '#c0392b', emoji: '🩸' },
+  { key: 'urine_test',    label: 'Urine Test',   te: 'మూత్ర పరీక్ష',      color: '#e67e22', emoji: '🧪' },
+  { key: 'xray',          label: 'X-Ray',        te: 'ఎక్స్-రే',           color: '#2980b9', emoji: '🦴' },
+  { key: 'mri',           label: 'MRI',          te: 'MRI స్కాన్',         color: '#8e44ad', emoji: '🧲' },
+  { key: 'ct_scan',       label: 'CT Scan',      te: 'సీటీ స్కాన్',        color: '#16a085', emoji: '💿' },
+  { key: 'ecg',           label: 'ECG',          te: 'ECG',                color: '#d35400', emoji: '📈' },
+  { key: 'ultrasound',    label: 'Ultrasound',   te: 'అల్ట్రాసౌండ్',      color: '#27ae60', emoji: '〽️' },
+  { key: 'consultation',  label: 'Consultation', te: 'సంప్రదింపు',         color: '#2c3e50', emoji: '🩺' },
+  { key: 'prescription',  label: 'Prescription', te: 'ప్రిస్క్రిప్షన్',   color: '#1abc9c', emoji: '💊' },
+  { key: 'vaccination',   label: 'Vaccination',  te: 'టీకా',               color: '#3498db', emoji: '💉' },
+  { key: 'other',         label: 'Other',        te: 'ఇతర',                color: '#7f8c8d', emoji: '📋' },
+];
 export const EMPTY_ADDRESS = {
   line1: '', line2: '', city: '', district: '', state: '', pincode: '', country: 'India',
 };

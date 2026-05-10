@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Button, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import config from './config';
 import {
   EMPTY_ADDRESS, EMPTY_HANDLES, EMPTY_REG,
   INDIA_STATES, US_STATES, INDIA_CITIES,
-  LOOKUP_APIS, HANDLE_META,
+  LOOKUP_APIS, HANDLE_META, RECORD_TYPES,
 } from './constants';
 
 const API_BASE = config.apiBaseUrl;
@@ -30,6 +30,33 @@ const HandleBadge = ({ handleKey, style }) => {
       <Text style={{ fontSize: 13, fontWeight: '600', color: '#2b3a67' }}>{meta.label}</Text>
     </View>
   );
+};
+
+// Coloured badge showing record type emoji + label
+const RecordTypeBadge = ({ typeKey }) => {
+  const rt = RECORD_TYPES.find(r => r.key === typeKey) || RECORD_TYPES[RECORD_TYPES.length - 1];
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+      <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: rt.color,
+                     alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontSize: 16 }}>{rt.emoji}</Text>
+      </View>
+      <View>
+        <Text style={{ fontSize: 13, fontWeight: '700', color: rt.color }}>{rt.label}</Text>
+        <Text style={{ fontSize: 11, color: '#9aaac4' }}>{rt.te}</Text>
+      </View>
+    </View>
+  );
+};
+
+// File extension → display category
+const fileIcon = (name) => {
+  const ext = (name || '').split('.').pop().toLowerCase();
+  if (['jpg','jpeg','png','gif','webp'].includes(ext)) return '🖼️';
+  if (ext === 'pdf')  return '📄';
+  if (ext === 'json') return '📊';
+  if (['csv','txt'].includes(ext)) return '📝';
+  return '📎';
 };
 
 const MONTHS = [
@@ -279,7 +306,12 @@ export default function App() {
   const [editMode, setEditMode] = useState(false);
   const [editDraft, setEditDraft] = useState({});
   const [records, setRecords] = useState([]);
-  const [newRecord, setNewRecord] = useState({ title: '', description: '', date: '' });
+  // New visit form state
+  const [addingVisit, setAddingVisit] = useState(false);
+  const [visitDraft, setVisitDraft] = useState({ date: '', type: 'consultation', doctor: '', notes: '' });
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   const handleSendOtp = async () => {
     setMessage('Sending OTP...');
@@ -389,20 +421,43 @@ export default function App() {
     } catch (e) { console.error(e); }
   };
 
-  const addRecord = async () => {
+  const submitVisit = async () => {
+    setUploading(true);
     try {
+      const form = new FormData();
+      form.append('date',   visitDraft.date || new Date().toISOString().slice(0, 10));
+      form.append('type',   visitDraft.type);
+      form.append('doctor', visitDraft.doctor);
+      form.append('notes',  visitDraft.notes);
+      selectedFiles.forEach(f => form.append('files', f));
       const response = await fetch(`${API_BASE}/records`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(newRecord),
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: form,
       });
       if (response.ok) {
-        setNewRecord({ title: '', description: '', date: '' });
+        setVisitDraft({ date: '', type: 'consultation', doctor: '', notes: '' });
+        setSelectedFiles([]);
+        setAddingVisit(false);
         fetchRecords();
-        setMessage('Record added successfully!');
-      } else { setMessage('Failed to add record.'); }
-    } catch { setMessage('Unable to add record.'); }
+        setMessage('Visit record saved!');
+      } else { setMessage('Failed to save record.'); }
+    } catch { setMessage('Unable to save record.'); }
+    setUploading(false);
   };
+
+  const deleteVisit = async (visitId) => {
+    try {
+      await fetch(`${API_BASE}/records/${visitId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      fetchRecords();
+    } catch (e) { console.error(e); }
+  };
+
+  const fileUrl = (visitId, filename) =>
+    `${config.apiBaseUrl}/records/${visitId}/files/${encodeURIComponent(filename)}?token=${token}`;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -582,27 +637,136 @@ export default function App() {
         </View>
       )}
 
-      {/* ── Records ── */}
+      {/* ── Medical Records ── */}
       {step === 'records' && (
         <View style={styles.form}>
-          <Text style={styles.sectionTitle}>Medical Records</Text>
-          <Button title="← Back to Profile" onPress={() => setStep('profile')} />
-          {records.length === 0 && <Text style={styles.empty}>No records yet.</Text>}
-          {[...records].reverse().map((record) => (
-            <View key={record.id} style={styles.record}>
-              <Text style={styles.recordTitle}>{record.title}</Text>
-              <Text style={styles.recordMeta}>{record.date}</Text>
-              <Text>{record.description}</Text>
+          <Text style={styles.sectionTitle}>Medical Records / వైద్య రికార్డులు</Text>
+
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Button title="← Back to Profile" onPress={() => { setAddingVisit(false); setStep('profile'); }} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Button title="+ Add Visit" onPress={() => setAddingVisit(v => !v)} />
+            </View>
+          </View>
+
+          {/* ── Add Visit Form ── */}
+          {addingVisit && (
+            <View style={styles.visitForm}>
+              <Text style={styles.sectionSubtitle}>New Visit / కొత్త సందర్శన</Text>
+
+              <BiLabel en="Date of Visit" te="సందర్శన తేదీ" />
+              <DOBPicker value={visitDraft.date} onChange={d => setVisitDraft({ ...visitDraft, date: d })} />
+
+              <BiLabel en="Record Type" te="రికార్డు రకం" />
+              <View style={styles.pillRow}>
+                {RECORD_TYPES.map(rt => (
+                  <TouchableOpacity key={rt.key}
+                    style={[styles.pill, visitDraft.type === rt.key && { ...styles.pillActive, borderColor: rt.color, backgroundColor: rt.color }]}
+                    onPress={() => setVisitDraft({ ...visitDraft, type: rt.key })}>
+                    <Text style={{ fontSize: 12 }}>{rt.emoji} </Text>
+                    <Text style={[styles.pillText, visitDraft.type === rt.key && styles.pillTextActive]}>{rt.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <BiLabel en="Doctor / Hospital" te="వైద్యుడు / ఆసుపత్రి" />
+              <TextInput style={styles.input} placeholder="Dr. Name or Hospital"
+                value={visitDraft.doctor} onChangeText={t => setVisitDraft({ ...visitDraft, doctor: t })} />
+
+              <BiLabel en="Notes" te="గమనికలు" />
+              <TextInput style={[styles.input, { height: 80, textAlignVertical: 'top', paddingTop: 10 }]}
+                placeholder="Symptoms, diagnosis, observations…"
+                multiline value={visitDraft.notes}
+                onChangeText={t => setVisitDraft({ ...visitDraft, notes: t })} />
+
+              <BiLabel en="Attach Files" te="ఫైళ్ళు జోడించండి" />
+              <Text style={{ fontSize: 12, color: '#6b7a99', marginBottom: 6 }}>
+                PDF, images, JSON, CSV — multiple files allowed
+              </Text>
+
+              {Platform.OS === 'web' && (
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.json,.csv,.txt"
+                  style={{ display: 'none' }}
+                  onChange={e => setSelectedFiles(Array.from(e.target.files))}
+                />
+              )}
+
+              <TouchableOpacity style={styles.filePickerBtn}
+                onPress={() => fileInputRef.current && fileInputRef.current.click()}>
+                <Text style={styles.filePickerText}>📎 Choose Files</Text>
+              </TouchableOpacity>
+
+              {selectedFiles.length > 0 && (
+                <View style={{ marginTop: 8, marginBottom: 8 }}>
+                  {selectedFiles.map((f, i) => (
+                    <View key={i} style={styles.fileChip}>
+                      <Text style={styles.fileChipText}>{fileIcon(f.name)} {f.name}</Text>
+                      <TouchableOpacity onPress={() => setSelectedFiles(sf => sf.filter((_, j) => j !== i))}>
+                        <Text style={{ color: '#c0392b', marginLeft: 8, fontWeight: '700' }}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              <Button title={uploading ? 'Saving…' : 'Save Visit / సేవ్ చేయండి'}
+                onPress={submitVisit} disabled={uploading || !visitDraft.date} />
+              <View style={styles.spacer} />
+              <Button title="Cancel" onPress={() => { setAddingVisit(false); setSelectedFiles([]); }} />
+            </View>
+          )}
+
+          {/* ── Visit cards ── */}
+          {records.length === 0 && !addingVisit && (
+            <Text style={styles.empty}>No visits yet. Tap "+ Add Visit" to record your first visit.</Text>
+          )}
+          {records.map(rec => (
+            <View key={rec.id} style={styles.visitCard}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <RecordTypeBadge typeKey={rec.type} />
+                <Text style={styles.visitDate}>{rec.date}</Text>
+              </View>
+
+              {!!rec.doctor && (
+                <Text style={styles.visitDoctor}>🩺 {rec.doctor}</Text>
+              )}
+              {!!rec.notes && (
+                <Text style={styles.visitNotes}>{rec.notes}</Text>
+              )}
+
+              {rec.files && rec.files.length > 0 && (
+                <View style={{ marginTop: 8 }}>
+                  <Text style={{ fontSize: 12, color: '#6b7a99', marginBottom: 4 }}>
+                    Attachments / జోడింపులు ({rec.files.length})
+                  </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {rec.files.map(fn => (
+                      Platform.OS === 'web'
+                        ? <a key={fn} href={fileUrl(rec.id, fn)} target="_blank" rel="noreferrer"
+                             style={{ textDecoration: 'none' }}>
+                            <View style={styles.fileChip}>
+                              <Text style={styles.fileChipText}>{fileIcon(fn)} {fn}</Text>
+                            </View>
+                          </a>
+                        : <View key={fn} style={styles.fileChip}>
+                            <Text style={styles.fileChipText}>{fileIcon(fn)} {fn}</Text>
+                          </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              <TouchableOpacity style={styles.deleteBtn} onPress={() => deleteVisit(rec.id)}>
+                <Text style={styles.deleteBtnText}>🗑 Delete</Text>
+              </TouchableOpacity>
             </View>
           ))}
-          <Text style={styles.label}>Add New Visit Record</Text>
-          <TextInput style={styles.input} placeholder="Title (e.g. Annual Checkup)"
-            value={newRecord.title} onChangeText={(t) => setNewRecord({ ...newRecord, title: t })} />
-          <TextInput style={styles.input} placeholder="Description / Notes"
-            value={newRecord.description} onChangeText={(t) => setNewRecord({ ...newRecord, description: t })} />
-          <TextInput style={styles.input} placeholder="Date (YYYY-MM-DD)"
-            value={newRecord.date} onChangeText={(t) => setNewRecord({ ...newRecord, date: t })} />
-          <Button title="Add Record" onPress={addRecord} disabled={!newRecord.title.trim()} />
         </View>
       )}
 
@@ -793,5 +957,78 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7a99',
     marginBottom: 4,
+  },
+  visitForm: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#b0c4de',
+  },
+  visitCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#d0daea',
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  visitDate: {
+    fontSize: 13,
+    color: '#6b7a99',
+    fontWeight: '600',
+  },
+  visitDoctor: {
+    fontSize: 13,
+    color: '#2b3a67',
+    marginTop: 6,
+  },
+  visitNotes: {
+    fontSize: 13,
+    color: '#4a5568',
+    marginTop: 4,
+    lineHeight: 18,
+  },
+  filePickerBtn: {
+    borderWidth: 1,
+    borderColor: '#b0c4de',
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    backgroundColor: '#f8faff',
+    marginBottom: 8,
+  },
+  filePickerText: {
+    color: '#2b3a67',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  fileChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eef2ff',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginRight: 6,
+    marginBottom: 4,
+  },
+  fileChipText: {
+    fontSize: 12,
+    color: '#1f3c88',
+  },
+  deleteBtn: {
+    marginTop: 10,
+    alignSelf: 'flex-end',
+  },
+  deleteBtnText: {
+    fontSize: 12,
+    color: '#c0392b',
   },
 });
