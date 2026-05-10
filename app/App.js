@@ -141,18 +141,6 @@ export default function App() {
     } catch { setMessage('Unable to add record.'); }
   };
 
-  const saveProfile = async () => {
-    try {
-      const response = await fetch(`${API_BASE}/profile`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(profile),
-      });
-      if (response.ok) setMessage('Profile updated successfully!');
-      else setMessage('Failed to update profile.');
-    } catch { setMessage('Unable to save profile.'); }
-  };
-
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>AyushCare</Text>
