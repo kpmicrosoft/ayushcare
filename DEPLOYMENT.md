@@ -58,6 +58,22 @@ The frontend automatically selects the API URL based on the environment via `app
 
 No manual changes are needed. If the backend URL changes, update `PROD_API_URL` in `app/config.js`.
 
+### Backend — Persistent Data Storage on Azure
+
+On Azure App Service Linux, the container file system is ephemeral and is **wiped on every restart or redeploy**. The `/home` volume is the only path that persists across restarts, slot swaps, and scale-out instances.
+
+The backend automatically detects Azure by checking the `WEBSITE_SITE_NAME` environment variable (set by Azure App Service). When detected, it stores all data under `/home/data` instead of the local `../data` folder. No manual configuration is required.
+
+To override the path explicitly, set the `DATA_DIR` app setting in the Azure portal:
+```bash
+az webapp config appsettings set \
+  --resource-group ayushcare-rg \
+  --name ayushcare-api \
+  --settings DATA_DIR=/home/data
+```
+
+> **Important**: If you are migrating an existing deployment, copy any data from the old location to `/home/data` before restarting the app service.
+
 ## Step 4: Deploy
 
 ### Automatic Deployment (GitHub Actions)

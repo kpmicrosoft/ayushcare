@@ -16,8 +16,16 @@ app = Flask(__name__)
 CORS(app)
 
 # ── Data paths ────────────────────────────────────────────────────────────────
-BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR     = os.path.join(BASE_DIR, '..', 'data')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# On Azure App Service, WEBSITE_SITE_NAME is always set.
+# /home is the persistent volume that survives restarts and slot swaps.
+# Locally, fall back to the repo's data/ directory.
+_is_azure = bool(os.environ.get('WEBSITE_SITE_NAME'))
+DATA_DIR  = os.environ.get(
+    'DATA_DIR',
+    '/home/data' if _is_azure else os.path.join(BASE_DIR, '..', 'data')
+)
 METADATA_DIR = os.path.join(DATA_DIR, 'metadata')
 ARCHIVE_DIR  = os.path.join(METADATA_DIR, 'archive')
 REGISTRY     = os.path.join(METADATA_DIR, 'users.json')
@@ -501,6 +509,36 @@ def serve_record_file(visit_id, filename):
     mime, _ = mimetypes.guess_type(filepath)
     return send_file(filepath, mimetype=mime or 'application/octet-stream',
                      as_attachment=False, download_name=filename)
+
+@app.route('/api/admin/browse', methods=['GET'])
+def admin_browse():
+    """List contents of a directory within DATA_DIR for the admin panel."""
+    user, err, code = _authed_user(request)
+    if err:
+        return err, code
+
+    rel    = request.args.get('path', '').strip('/')
+    root   = os.path.realpath(DATA_DIR)
+    target = os.path.realpath(os.path.join(root, rel)) if rel else root
+
+    # Prevent path traversal outside DATA_DIR
+    if not target.startswith(root):
+        return jsonify({'error': 'Invalid path'}), 400
+    if not os.path.exists(target):
+        return jsonify({'error': 'Path not found'}), 404
+
+    entries = []
+    for name in sorted(os.listdir(target)):
+        full = os.path.join(target, name)
+        stat = os.stat(full)
+        entries.append({
+            'name':     name,
+            'type':     'dir' if os.path.isdir(full) else 'file',
+            'size':     stat.st_size if os.path.isfile(full) else None,
+            'modified': datetime.fromtimestamp(stat.st_mtime).isoformat(),
+        })
+
+    return jsonify({'path': rel, 'entries': entries}), 200
 
 @app.route('/swagger.json')
 def swagger_json():

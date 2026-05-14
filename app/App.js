@@ -361,8 +361,25 @@ export default function App() {
   const [uploading, setUploading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(null);
+  const [adminPath, setAdminPath]       = useState('');
+  const [adminEntries, setAdminEntries] = useState([]);
+  const [adminLoading, setAdminLoading] = useState(false);
   const fileInputRef   = useRef(null);
   const importInputRef = useRef(null);
+
+  const browseAdmin = async (path) => {
+    setAdminPath(path);
+    setAdminLoading(true);
+    try {
+      const res = await fetch(
+        `${API_BASE}/admin/browse?path=${encodeURIComponent(path)}`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      if (res.ok) setAdminEntries((await res.json()).entries || []);
+      else setAdminEntries([]);
+    } catch { setAdminEntries([]); }
+    setAdminLoading(false);
+  };
 
   const handleSendOtp = async () => {
     setMessage('Sending OTP...');
@@ -625,7 +642,7 @@ export default function App() {
       )}
 
       {/* ── Persistent nav bar (post-login) ── */}
-      {['profile', 'records'].includes(step) && (
+      {['profile', 'records', 'admin'].includes(step) && (
         <View style={styles.navBar}>
           <TouchableOpacity
             style={[styles.navItem, step === 'profile' && styles.navItemActive]}
@@ -636,6 +653,11 @@ export default function App() {
             style={[styles.navItem, step === 'records' && styles.navItemActive]}
             onPress={() => { setAddingVisit(false); setSummaryView('visits'); setStep('records'); }}>
             <Text style={[styles.navText, step === 'records' && styles.navTextActive]}>🏥 Medical Records</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.navItem, step === 'admin' && styles.navItemActive]}
+            onPress={() => { browseAdmin(''); setStep('admin'); }}>
+            <Text style={[styles.navText, step === 'admin' && styles.navTextActive]}>⚙️ Admin</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -1130,6 +1152,85 @@ export default function App() {
         </View>
       )}
 
+      {/* ── Admin: Data Folder Browser ── */}
+      {step === 'admin' && (
+        <View style={styles.form}>
+          <Text style={styles.sectionTitle}>⚙️ Admin — Data Browser</Text>
+
+          {/* Breadcrumb nav */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+            <TouchableOpacity onPress={() => browseAdmin('')}>
+              <Text style={styles.breadcrumbSeg}>data</Text>
+            </TouchableOpacity>
+            {adminPath.split('/').filter(Boolean).map((seg, idx, arr) => {
+              const sub = arr.slice(0, idx + 1).join('/');
+              return (
+                <View key={sub} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={styles.breadcrumbSep}>/</Text>
+                  <TouchableOpacity onPress={() => browseAdmin(sub)}>
+                    <Text style={styles.breadcrumbSeg}>{seg}</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </View>
+
+          {/* Go up one level */}
+          {adminPath !== '' && (
+            <TouchableOpacity
+              style={styles.adminEntry}
+              onPress={() => {
+                const up = adminPath.includes('/')
+                  ? adminPath.substring(0, adminPath.lastIndexOf('/'))
+                  : '';
+                browseAdmin(up);
+              }}>
+              <Text style={{ fontSize: 18, marginRight: 10 }}>⬆️</Text>
+              <Text style={{ fontSize: 14, color: '#6b7a99' }}>.. (up)</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Directory listing */}
+          {adminLoading ? (
+            <Text style={styles.empty}>Loading…</Text>
+          ) : adminEntries.length === 0 ? (
+            <Text style={styles.empty}>Empty directory</Text>
+          ) : (
+            adminEntries.map(entry => (
+              <TouchableOpacity
+                key={entry.name}
+                style={styles.adminEntry}
+                onPress={() => entry.type === 'dir'
+                  ? browseAdmin(adminPath ? `${adminPath}/${entry.name}` : entry.name)
+                  : null}
+                activeOpacity={entry.type === 'dir' ? 0.6 : 1}>
+                <Text style={{ fontSize: 18, marginRight: 10 }}>
+                  {entry.type === 'dir' ? '📁' : fileIcon(entry.name)}
+                </Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{
+                    fontSize: 14,
+                    color: '#1f3c88',
+                    fontWeight: entry.type === 'dir' ? '700' : '400',
+                  }}>
+                    {entry.name}
+                  </Text>
+                  {entry.type === 'file' && (
+                    <Text style={{ fontSize: 11, color: '#9aaac4' }}>
+                      {entry.size != null ? `${(entry.size / 1024).toFixed(1)} KB` : ''}
+                      {entry.modified ? `  ·  ${entry.modified.slice(0, 10)}` : ''}
+                    </Text>
+                  )}
+                </View>
+                {entry.type === 'dir' && (
+                  <Text style={{ color: '#9aaac4', fontSize: 18 }}>›</Text>
+                )}
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+      )}
+
       <Text style={styles.message}>{message}</Text>
       <StatusBar style="auto" />
     </ScrollView>
@@ -1476,5 +1577,23 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 12,
+  },
+  adminEntry: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e8edf5',
+  },
+  breadcrumbSeg: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1f3c88',
+  },
+  breadcrumbSep: {
+    fontSize: 13,
+    color: '#9aaac4',
+    marginHorizontal: 4,
   },
 });
